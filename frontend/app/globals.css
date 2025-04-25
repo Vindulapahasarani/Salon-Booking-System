@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+.section {
+    scroll-margin-top: 12vh; /* Matches your navbar height */
+    padding-top: 20px; /* Some breathing room */
+  }
+  
