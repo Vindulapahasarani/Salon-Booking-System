@@ -11,10 +11,19 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Save user info from token (like userId)
+
+    // Attach full user data (not just ID) for better access
+    req.user = {
+      id: decoded.userId,
+      name: decoded.name,     // if you add name later in token
+      email: decoded.email,   // if you add email later in token
+      role: decoded.role || "user" // default to 'user' if no role
+    };
+
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Unauthorized: Invalid token" });
+    console.error("❌ Token verification failed:", error.message);
+    return res.status(401).json({ message: "Unauthorized: Invalid or expired token" });
   }
 };
 

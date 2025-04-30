@@ -3,7 +3,8 @@ import Home from "@/components/Home/Home";
 import AboutUs from "@/components/About Us/Aboutus";
 import Services from "@/components/Services/Services";
 import Booking from "@/components/Booking/Booking";
-import Contact from "@/components/Contact/Contact";
+import { Contact } from "lucide-react";
+
 
 const HomePage = () => {
   return ( 
@@ -24,9 +25,8 @@ const HomePage = () => {
         <Booking />
       </section>
 
-      <section id="contact" className="section">
-        <Contact />
-      </section>
+    
+
     </div>
   );
 };

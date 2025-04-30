@@ -1,12 +1,11 @@
+// utils/axios.js
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: 'http://localhost:5000/api', // change this to your API base URL
 });
 
+// Add the token to every request automatically
 instance.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {

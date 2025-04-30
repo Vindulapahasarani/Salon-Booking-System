@@ -16,12 +16,20 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    serviceName: {
+      type: String,
+      required: true,
+    },
     date: {
       type: Date,
       required: true,
     },
     timeSlot: {
       type: String,
+      required: true,
+    },
+    price: {
+      type: Number,
       required: true,
     },
     status: {

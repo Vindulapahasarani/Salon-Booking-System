@@ -1,18 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const authController = require("../controllers/auth");
-const verifyToken = require("../middleware/authMiddleware");
+const authController = require("../controllers/authController");
+const verifyToken = require("../middleware/verifyToken"); // Import the middleware
 
 // Public routes
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 
-// Protected route
-router.get("/me", verifyToken, (req, res) => {
-  res.status(200).json({
-    message: "Protected route accessed!",
-    user: req.user,
-  });
-});
+// Protected route - must have token
+router.get("/me", verifyToken, authController.getMe);
 
 module.exports = router;

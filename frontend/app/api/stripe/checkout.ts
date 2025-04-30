@@ -1,36 +1,38 @@
-'use client'
-import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-03-31.basil' ,
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2023-10-16',
 });
 
 export async function POST(req: NextRequest) {
-  const { amount } = await req.json();
+  const { appointmentId, price, tipAmount, serviceName } = await req.json();
+
+  const totalAmount = price + tipAmount;
 
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      mode: 'payment',
       line_items: [
         {
           price_data: {
             currency: 'usd',
-            unit_amount: amount,
             product_data: {
-              name: 'Salon Service Booking',
+              name: `Booking: ${serviceName}`,
             },
+            unit_amount: totalAmount * 100, // cents
           },
           quantity: 1,
         },
       ],
-      success_url: `${req.nextUrl.origin}/success`,
-      cancel_url: `${req.nextUrl.origin}/cancel`,
+      mode: 'payment',
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/success?appointmentId=${appointmentId}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/cancel`,
     });
 
-    return NextResponse.json({ id: session.id });
-  } catch (err) {
-    return NextResponse.json({ error: err }, { status: 500 });
+    return NextResponse.json({ checkoutUrl: session.url });
+  } catch (error) {
+    console.error('Stripe error:', error);
+    return NextResponse.error();
   }
 }

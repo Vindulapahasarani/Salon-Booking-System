@@ -9,7 +9,7 @@ const Footer = () => {
         
         {/* Left Section: Salon Name & Social Icons */}
         <div className="flex flex-col items-start">
-          <h2 className="text-3xl font-bold">HODOR SALON</h2>
+          <h2 className="text-3xl font-bold">BARBER SALON</h2>
           <div className="flex space-x-4 mt-4">
             <Link href="#" className="bg-gray-700 p-3 rounded-full">
               <FaFacebookF className="text-white" />
@@ -25,7 +25,7 @@ const Footer = () => {
             </Link>
           </div>
           <p className="text-gray-400 mt-4 max-w-sm">
-            Experience luxury hair and beauty treatments at Hodor Salon. Your style, our passion!
+            Experience luxury hair and beauty treatments at Barber Salon. Your style, our passion!
           </p>
         </div>
 
