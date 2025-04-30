@@ -1,110 +1,119 @@
+/* Updated /app/booking/[serviceId]/page.tsx */
+
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
-export default function BookingForm({ params }: { params: { serviceId: string } }) {
+export default function BookingPage() {
+  const { serviceId } = useParams();
   const router = useRouter();
   const [service, setService] = useState<any>(null);
   const [date, setDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState('');
-  const [price, setPrice] = useState('');
+  const [time, setTime] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchService = async () => {
-      const res = await fetch(`http://localhost:5000/api/services/${params.serviceId}`);
-      const data = await res.json();
-      setService(data);
-      setPrice(data.price); // set default price
+      try {
+        const res = await fetch(`/api/services/${serviceId}`);
+        const data = await res.json();
+        setService(data);
+      } catch (error) {
+        console.error('Error fetching service:', error);
+      }
     };
-
-    fetchService();
-
-    // ✅ Check for token
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please sign in to book an appointment.');
-      router.push('/signin');
-    }
-  }, [params.serviceId, router]);
+    if (serviceId) fetchService();
+  }, [serviceId]);
 
   const handleBooking = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('User not authenticated');
+    if (!date || !time) {
+      toast.error('Please select date and time');
       return;
     }
 
+    const datetime = new Date(`${date}T${time}`);
+
+    setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/appointments', {
+      const res = await fetch('/api/appointments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          serviceName: service?.name,
-          date,
-          timeSlot,
-          price,
+          serviceId,
+          date: datetime.toISOString(),
         }),
       });
 
-      const result = await res.json();
-
-      if (res.ok) {
-        alert('Appointment booked successfully!');
-        router.push('/dashboard/user'); // redirect to user dashboard
-      } else {
-        alert(result.message || 'Booking failed.');
+      if (!res.ok) {
+        throw new Error('Failed to create appointment');
       }
-    } catch (error) {
-      console.error('Booking error:', error);
-      alert('An error occurred while booking.');
+
+      toast.success('Appointment booked!');
+      router.push('/dashboard');
+    } catch (err) {
+      toast.error('Failed to create appointment.');
+      console.error('Booking error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white">
-      <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-semibold mb-4 text-center text-indigo-600">Book Appointment</h2>
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="bg-white p-6 rounded-2xl shadow-xl w-[400px]">
+        <h2 className="text-lg font-semibold mb-4">Book New Appointment</h2>
+
+        {service && (
+          <div className="mb-4">
+            <label className="block mb-1 text-sm">Service</label>
+            <select
+              value={service._id}
+              disabled
+              className="w-full border px-3 py-2 rounded-lg text-gray-700"
+            >
+              <option>{service.name} – ${service.price}</option>
+            </select>
+          </div>
+        )}
 
         <div className="mb-4">
-          <label className="block mb-1 text-gray-700">Date</label>
+          <label className="block mb-1 text-sm">Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded-lg"
           />
         </div>
 
         <div className="mb-4">
-          <label className="block mb-1 text-gray-700">Time</label>
+          <label className="block mb-1 text-sm">Time</label>
           <input
             type="time"
-            value={timeSlot}
-            onChange={(e) => setTimeSlot(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full border px-3 py-2 rounded-lg"
           />
         </div>
 
-        <div className="mb-6">
-          <label className="block mb-1 text-gray-700">Price</label>
-          <input
-            type="text"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-          />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-gray-200 px-4 py-2 rounded-lg"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleBooking}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+            disabled={loading}
+          >
+            {loading ? 'Booking...' : 'Book'}
+          </button>
         </div>
-
-        <button
-          onClick={handleBooking}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-        >
-          Book Appointment
-        </button>
       </div>
     </div>
   );

@@ -12,12 +12,11 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Attach full user data (not just ID) for better access
     req.user = {
       id: decoded.userId,
-      name: decoded.name,     // if you add name later in token
-      email: decoded.email,   // if you add email later in token
-      role: decoded.role || "user" // default to 'user' if no role
+      name: decoded.name || "",
+      email: decoded.email || "",
+      role: decoded.role || "user"
     };
 
     next();

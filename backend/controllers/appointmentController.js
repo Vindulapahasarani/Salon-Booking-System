@@ -7,10 +7,15 @@ exports.createAppointment = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: user info missing" });
     }
 
-    const { serviceId, serviceName, timeSlot, price } = req.body;
+    const { serviceId, serviceName, date, timeSlot, price } = req.body;
 
-    if (!serviceId || !serviceName || !timeSlot || !price) {
+    if (!serviceId || !serviceName || !date || !timeSlot || !price) {
       return res.status(400).json({ message: "Missing required appointment fields." });
+    }
+
+    const parsedDate = new Date(date); // 👈 This will include date and time together
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date format." });
     }
 
     const appointment = new Appointment({
@@ -18,7 +23,8 @@ exports.createAppointment = async (req, res) => {
       userEmail: req.user.email,
       serviceId,
       serviceName,
-      timeSlot, // e.g., "2024-04-29 14:00"
+      date: parsedDate,        // 👈 Mongoose expects full Date here
+      timeSlot,                // 👈 Still store timeSlot as separate string
       price,
       status: "pending",
     });
@@ -26,7 +32,7 @@ exports.createAppointment = async (req, res) => {
     await appointment.save();
     res.status(201).json(appointment);
   } catch (err) {
-    console.error("createAppointment error:", err.stack);
+    console.error("❌ createAppointment error:", err.stack);
     res.status(500).json({ message: "Failed to create appointment." });
   }
 };
@@ -41,7 +47,7 @@ exports.getMyAppointments = async (req, res) => {
     const appointments = await Appointment.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json(appointments);
   } catch (err) {
-    console.error("getMyAppointments error:", err.stack);
+    console.error("❌ getMyAppointments error:", err.stack);
     res.status(500).json({ message: "Failed to fetch your appointments." });
   }
 };
@@ -52,7 +58,7 @@ exports.getAllAppointments = async (req, res) => {
     const appointments = await Appointment.find().sort({ createdAt: -1 });
     res.status(200).json(appointments);
   } catch (err) {
-    console.error("getAllAppointments error:", err.stack);
+    console.error("❌ getAllAppointments error:", err.stack);
     res.status(500).json({ message: "Failed to fetch appointments." });
   }
 };
@@ -64,7 +70,7 @@ exports.getAppointmentsByEmail = async (req, res) => {
     const appointments = await Appointment.find({ userEmail: email }).sort({ createdAt: -1 });
     res.status(200).json(appointments);
   } catch (err) {
-    console.error("getAppointmentsByEmail error:", err.stack);
+    console.error("❌ getAppointmentsByEmail error:", err.stack);
     res.status(500).json({ message: "Failed to fetch appointments by email." });
   }
 };
@@ -85,7 +91,7 @@ exports.updateAppointment = async (req, res) => {
 
     res.status(200).json({ message: "Appointment updated successfully!", appointment: updatedAppointment });
   } catch (err) {
-    console.error("updateAppointment error:", err.stack);
+    console.error("❌ updateAppointment error:", err.stack);
     res.status(500).json({ message: "Failed to update appointment." });
   }
 };
@@ -106,7 +112,7 @@ exports.approveAppointment = async (req, res) => {
 
     res.status(200).json({ message: "Appointment approved successfully!", appointment: updatedAppointment });
   } catch (err) {
-    console.error("approveAppointment error:", err.stack);
+    console.error("❌ approveAppointment error:", err.stack);
     res.status(500).json({ message: "Failed to approve appointment." });
   }
 };
@@ -123,7 +129,7 @@ exports.deleteAppointment = async (req, res) => {
 
     res.status(200).json({ message: "Appointment deleted successfully!" });
   } catch (err) {
-    console.error("deleteAppointment error:", err.stack);
+    console.error("❌ deleteAppointment error:", err.stack);
     res.status(500).json({ message: "Failed to delete appointment." });
   }
 };

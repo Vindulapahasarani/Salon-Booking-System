@@ -45,11 +45,15 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
       return;
     }
 
+    // Combine date and time into ISO string
+    const isoDateTime = new Date(`${date}T${time}`);
+
     try {
       await axios.post('/appointments', {
         serviceId: selectedServiceObj._id,
         serviceName: selectedServiceObj.name,
-        timeSlot: `${date} ${time}`,
+        date: isoDateTime.toISOString(),   // 👉 required for backend `date`
+        timeSlot: time,                    // 👉 saved separately
         price: selectedServiceObj.price,
       });
 
