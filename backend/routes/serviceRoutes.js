@@ -3,19 +3,13 @@ const router = express.Router();
 const serviceController = require("../controllers/serviceController");
 const verifyToken = require("../middleware/authMiddleware");
 
-// Create service (protected)
-router.post("/", verifyToken, serviceController.createService);
+// Public routes
+router.get("/", serviceController.getServices); // List all services
+router.get("/:id", serviceController.getServiceById); // Get single service
 
-// Get all services (public)
-router.get("/", serviceController.getServices);
-
-router.get("/:id", serviceController.getServiceById);
-
-
-// Update service (protected)
-router.put("/:id", verifyToken, serviceController.updateService);
-
-// Delete service (protected)
-router.delete("/:id", verifyToken, serviceController.deleteService);
+// Protected routes (admin or authenticated user)
+router.post("/", verifyToken, serviceController.createService); // Create
+router.put("/:id", verifyToken, serviceController.updateService); // Update
+router.delete("/:id", verifyToken, serviceController.deleteService); // Delete
 
 module.exports = router;

@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import axios from "@/utils/axios"; // Make sure your axios instance is set up
+import axios from "@/utils/axios";
 import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
+
+
+type DecodedToken = {
+  userId: string;
+  email: string;
+  name: string;
+  isAdmin: boolean;
+  exp: number;
+  iat: number;
+};
 
 const LoginForm = () => {
   const router = useRouter();
@@ -17,8 +28,17 @@ const LoginForm = () => {
       const { token } = response.data;
 
       if (token) {
-        localStorage.setItem("token", token); // ✅ Save token to localStorage
-        router.push("/dashboard"); // ✅ Redirect to dashboard
+        localStorage.setItem("token", token);
+
+        // ✅ Decode the token to check isAdmin
+        const decoded: DecodedToken = jwtDecode(token);
+
+
+        if (decoded.isAdmin) {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError("Invalid login response. No token received.");
       }

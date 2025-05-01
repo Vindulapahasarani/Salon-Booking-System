@@ -13,7 +13,7 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ message: "Missing required appointment fields." });
     }
 
-    const parsedDate = new Date(date); // 👈 This will include date and time together
+    const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
       return res.status(400).json({ message: "Invalid date format." });
     }
@@ -23,8 +23,8 @@ exports.createAppointment = async (req, res) => {
       userEmail: req.user.email,
       serviceId,
       serviceName,
-      date: parsedDate,        // 👈 Mongoose expects full Date here
-      timeSlot,                // 👈 Still store timeSlot as separate string
+      date: parsedDate,
+      timeSlot,
       price,
       status: "pending",
     });
@@ -52,11 +52,27 @@ exports.getMyAppointments = async (req, res) => {
   }
 };
 
-// Get all appointments (Admin only)
+// Get all appointments (Admin only) or by date if query param exists
 exports.getAllAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find().sort({ createdAt: -1 });
-    res.status(200).json(appointments);
+    const { date } = req.query;
+
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+
+      const appointments = await Appointment.find({
+        date: { $gte: start, $lte: end },
+      }).sort({ createdAt: -1 }).populate('serviceId');
+
+      return res.status(200).json(appointments);
+    }
+
+    const allAppointments = await Appointment.find().sort({ createdAt: -1 }).populate('serviceId');
+    res.status(200).json(allAppointments);
   } catch (err) {
     console.error("❌ getAllAppointments error:", err.stack);
     res.status(500).json({ message: "Failed to fetch appointments." });

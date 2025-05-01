@@ -6,6 +6,7 @@ import axios from "@/utils/axios";
 
 interface AuthContextType {
   user: any;
+  loading: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -14,12 +15,15 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       fetchUser();
+    } else {
+      setLoading(false); // No token, stop loading
     }
   }, []);
 
@@ -33,7 +37,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(res.data);
     } catch (err) {
       console.error("Failed to fetch user", err);
-      logout();
+      logout(false); // silent logout
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,14 +49,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push("/dashboard");
   };
 
-  const logout = () => {
+  const logout = (redirect = true) => {
     localStorage.removeItem("token");
     setUser(null);
-    router.push("/login");
+    if (redirect) router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

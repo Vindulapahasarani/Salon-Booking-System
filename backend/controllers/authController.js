@@ -12,6 +12,10 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "User already exists." });
     }
 
+    // ✅ Auto-promote first user to admin
+    const userCount = await User.countDocuments();
+    const isAdmin = userCount === 0;
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -19,17 +23,18 @@ exports.register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      isAdmin,
     });
 
     await newUser.save();
 
-    // ✅ Create JWT with user details
+    // ✅ Create JWT with isAdmin info
     const token = jwt.sign(
       {
         userId: newUser._id,
         email: newUser.email,
         name: newUser.name,
-        role: newUser.role || "user",
+        isAdmin: newUser.isAdmin || false,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -42,7 +47,7 @@ exports.register = async (req, res) => {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role || "user",
+        isAdmin: newUser.isAdmin || false,
       },
     });
   } catch (err) {
@@ -66,13 +71,13 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
-    // ✅ Create JWT with user details
+    // ✅ Create JWT with isAdmin info
     const token = jwt.sign(
       {
         userId: user._id,
         email: user.email,
         name: user.name,
-        role: user.role || "user",
+        isAdmin: user.isAdmin || false,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -84,7 +89,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role || "user",
+        isAdmin: user.isAdmin || false,
       },
     });
   } catch (err) {
