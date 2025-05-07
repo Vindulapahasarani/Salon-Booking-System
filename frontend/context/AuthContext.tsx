@@ -1,3 +1,4 @@
+// context/AuthContext.tsx
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -21,20 +22,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      fetchUser();
+      fetchUser(token);
     } else {
-      setLoading(false); // No token, stop loading
+      setLoading(false);
     }
   }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = async (token: string) => {
     try {
       const res = await axios.get("/auth/me", {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-      setUser(res.data);
+      
+      // Store user data with token included
+      setUser({
+        ...res.data,
+        token: token // Add token to user object
+      });
+
+      // Redirect based on role after fetching user
+      if (res.data.isAdmin) {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       console.error("Failed to fetch user", err);
       logout(false); // silent logout
@@ -45,14 +58,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = (token: string) => {
     localStorage.setItem("token", token);
-    fetchUser();
-    router.push("/dashboard");
+    fetchUser(token); // Pass token directly to ensure consistency
   };
 
   const logout = (redirect = true) => {
     localStorage.removeItem("token");
     setUser(null);
-    if (redirect) router.push("/login");
+    if (redirect) router.push("/"); // go to home after logout
   };
 
   return (

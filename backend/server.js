@@ -30,7 +30,6 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use('/api/test', testEmailRoute);
 app.use("/api/contact", contactRoutes);
-app.use("/api/admin", require("./routes/adminRoutes"));
 app.use('/api/admin', adminRoutes);
 
 // ✅ Connect to MongoDB

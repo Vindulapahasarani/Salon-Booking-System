@@ -12,8 +12,9 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    console.log("✅ Token Verified:", decoded); // Contains userId, email, isAdmin, etc.
-    req.user = decoded; // Attach to request for further middleware/routes
+    // Attach decoded user info (e.g. id, email, isAdmin) to request
+    req.user = decoded;
+
     next();
   } catch (err) {
     console.error("❌ Invalid Token:", err.message);

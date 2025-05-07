@@ -41,25 +41,16 @@ const DashboardPage = () => {
 
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
         const [statsRes, appointmentsRes] = await Promise.all([
-          axios.get('/api/admin/stats', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          axios.get('/api/admin/appointments', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
+          axios.get('/api/admin/stats'),
+          axios.get('/api/admin/appointments'),
         ]);
 
         setStats(statsRes.data);
         setAppointments(appointmentsRes.data);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setError('Failed to load admin data.');
+        setError('❌ Failed to load admin data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -76,7 +67,7 @@ const DashboardPage = () => {
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
       {loading ? (
-        <p>Loading data...</p>
+        <p className="text-gray-600">Loading data...</p>
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : (
@@ -101,30 +92,32 @@ const DashboardPage = () => {
           <div className="bg-white shadow rounded-xl p-4 border">
             <h2 className="text-xl font-semibold mb-4">Recent Appointments</h2>
             {appointments.length === 0 ? (
-              <p>No appointments found.</p>
+              <p className="text-gray-500">No appointments found.</p>
             ) : (
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-2">User</th>
-                    <th className="py-2">Service</th>
-                    <th className="py-2">Date</th>
-                    <th className="py-2">Time</th>
-                    <th className="py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.slice(0, 5).map((appt) => (
-                    <tr key={appt._id} className="border-b">
-                      <td className="py-2">{appt.user?.name || 'N/A'}</td>
-                      <td className="py-2">{appt.service?.name || 'N/A'}</td>
-                      <td className="py-2">{appt.date}</td>
-                      <td className="py-2">{appt.timeSlot}</td>
-                      <td className="py-2 capitalize">{appt.status}</td>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b">
+                      <th className="py-2 pr-4">User</th>
+                      <th className="py-2 pr-4">Service</th>
+                      <th className="py-2 pr-4">Date</th>
+                      <th className="py-2 pr-4">Time</th>
+                      <th className="py-2 pr-4">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {appointments.slice(0, 5).map((appt) => (
+                      <tr key={appt._id} className="border-b">
+                        <td className="py-2 pr-4">{appt.user?.name || 'N/A'}</td>
+                        <td className="py-2 pr-4">{appt.service?.name || 'N/A'}</td>
+                        <td className="py-2 pr-4">{appt.date}</td>
+                        <td className="py-2 pr-4">{appt.timeSlot}</td>
+                        <td className="py-2 pr-4 capitalize">{appt.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>

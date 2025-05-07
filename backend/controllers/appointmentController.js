@@ -3,7 +3,7 @@ const Appointment = require("../models/Appointment");
 // Create a new appointment
 exports.createAppointment = async (req, res) => {
   try {
-    if (!req.user || !req.user.id || !req.user.email) {
+    if (!req.user || !req.user.userId || !req.user.email) {
       return res.status(401).json({ message: "Unauthorized: user info missing" });
     }
 
@@ -19,7 +19,7 @@ exports.createAppointment = async (req, res) => {
     }
 
     const appointment = new Appointment({
-      userId: req.user.id,
+      userId: req.user.userId,
       userEmail: req.user.email,
       serviceId,
       serviceName,
@@ -40,11 +40,11 @@ exports.createAppointment = async (req, res) => {
 // Get all appointments for logged-in user
 exports.getMyAppointments = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
+    if (!req.user || !req.user.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const appointments = await Appointment.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    const appointments = await Appointment.find({ userId: req.user.userId }).sort({ createdAt: -1 });
     res.status(200).json(appointments);
   } catch (err) {
     console.error("❌ getMyAppointments error:", err.stack);
@@ -56,6 +56,7 @@ exports.getMyAppointments = async (req, res) => {
 exports.getAllAppointments = async (req, res) => {
   try {
     const { date } = req.query;
+    const query = {};
 
     if (date) {
       const start = new Date(date);
@@ -63,16 +64,26 @@ exports.getAllAppointments = async (req, res) => {
 
       const end = new Date(date);
       end.setHours(23, 59, 59, 999);
-
-      const appointments = await Appointment.find({
-        date: { $gte: start, $lte: end },
-      }).sort({ createdAt: -1 }).populate('serviceId');
-
-      return res.status(200).json(appointments);
+      query.date = { $gte: start, $lte: end };
     }
 
-    const allAppointments = await Appointment.find().sort({ createdAt: -1 }).populate('serviceId');
-    res.status(200).json(allAppointments);
+    const appointments = await Appointment.find(query)
+      .sort({ createdAt: -1 })
+      .populate("userId", "name email")
+      .populate("serviceId", "name");
+
+    const formatted = appointments.map((appt) => ({
+      _id: appt._id,
+      userName: appt.userId?.name || "Unknown",
+      userEmail: appt.userId?.email || appt.userEmail || "Unknown",
+      serviceName: appt.serviceName || appt.serviceId?.name || "N/A",
+      date: appt.date,
+      timeSlot: appt.timeSlot,
+      price: appt.price,
+      status: appt.status,
+    }));
+
+    res.status(200).json(formatted);
   } catch (err) {
     console.error("❌ getAllAppointments error:", err.stack);
     res.status(500).json({ message: "Failed to fetch appointments." });

@@ -5,18 +5,17 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from '@/utils/axios';
 import { format } from 'date-fns';
-
-// ✅ Use the correct Calendar value types from react-calendar
 import type { CalendarProps } from 'react-calendar';
 
 interface Appointment {
   _id: string;
   userEmail: string;
+  userName?: string;
   serviceName: string;
   date: string;
   timeSlot: string;
   price: number;
-  status: string;
+  status: 'pending' | 'approved' | 'canceled';
 }
 
 export default function AdminCalendarPage() {
@@ -24,12 +23,9 @@ export default function AdminCalendarPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Correct handler using react-calendar's types
   const handleDateChange: CalendarProps['onChange'] = (value) => {
     const date = Array.isArray(value) ? value[0] : value;
-    if (date instanceof Date) {
-      setSelectedDate(date);
-    }
+    if (date instanceof Date) setSelectedDate(date);
   };
 
   const fetchAppointmentsByDate = async (date: Date) => {
@@ -42,6 +38,17 @@ export default function AdminCalendarPage() {
       console.error('Failed to fetch appointments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: 'approved' | 'canceled') => {
+    try {
+      await axios.put(`/appointments/${id}`, { status });
+      setAppointments((prev) =>
+        prev.map((a) => (a._id === id ? { ...a, status } : a))
+      );
+    } catch (err) {
+      console.error('Failed to update appointment:', err);
     }
   };
 
@@ -63,9 +70,9 @@ export default function AdminCalendarPage() {
           />
         </div>
 
-        {/* Appointments List */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">
+        {/* Appointments Table */}
+        <div>
+          <h2 className="text-xl font-semibold mb-2">
             Appointments on {format(selectedDate, 'MMMM dd, yyyy')}
           </h2>
 
@@ -74,33 +81,43 @@ export default function AdminCalendarPage() {
           ) : appointments.length === 0 ? (
             <p className="text-gray-500">No appointments found.</p>
           ) : (
-            appointments.map((appointment) => (
-              <div
-                key={appointment._id}
-                className="border-l-4 border-blue-500 bg-white p-4 rounded-md shadow"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-lg font-medium">{appointment.serviceName}</p>
-                    <p className="text-sm text-gray-600">
-                      {appointment.timeSlot} - ${appointment.price}
-                    </p>
-                    <p className="text-sm text-gray-500">Client: {appointment.userEmail}</p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      appointment.status === 'approved'
-                        ? 'bg-green-100 text-green-800'
-                        : appointment.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {appointment.status}
-                  </span>
-                </div>
-              </div>
-            ))
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white rounded-xl shadow-md">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700">
+                    <th className="py-2 px-4 text-left">Service</th>
+                    <th className="py-2 px-4 text-left">Client</th>
+                    <th className="py-2 px-4 text-left">Time</th>
+                    <th className="py-2 px-4 text-left">Status</th>
+                    <th className="py-2 px-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {appointments.map((appt) => (
+                    <tr key={appt._id} className="border-t">
+                      <td className="py-2 px-4">{appt.serviceName}</td>
+                      <td className="py-2 px-4">{appt.userName || appt.userEmail}</td>
+                      <td className="py-2 px-4">{appt.timeSlot}</td>
+                      <td className="py-2 px-4 capitalize">{appt.status}</td>
+                      <td className="py-2 px-4 flex gap-2 justify-center">
+                        <button
+                          onClick={() => updateStatus(appt._id, 'approved')}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => updateStatus(appt._id, 'canceled')}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

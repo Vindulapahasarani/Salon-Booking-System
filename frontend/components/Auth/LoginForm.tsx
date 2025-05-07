@@ -1,44 +1,26 @@
+// components/Auth/LoginForm.tsx
 "use client";
 
 import { useState } from "react";
 import axios from "@/utils/axios";
-import { useRouter } from "next/navigation";
-import { jwtDecode } from "jwt-decode";
-
-
-type DecodedToken = {
-  userId: string;
-  email: string;
-  name: string;
-  isAdmin: boolean;
-  exp: number;
-  iat: number;
-};
+import { useAuth } from "@/context/AuthContext";
 
 const LoginForm = () => {
-  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     try {
       const response = await axios.post("/auth/login", { email, password });
       const { token } = response.data;
 
       if (token) {
-        localStorage.setItem("token", token);
-
-        // ✅ Decode the token to check isAdmin
-        const decoded: DecodedToken = jwtDecode(token);
-
-
-        if (decoded.isAdmin) {
-          router.push("/admin/dashboard");
-        } else {
-          router.push("/dashboard");
-        }
+        login(token); // ✅ This now handles redirection based on role
       } else {
         setError("Invalid login response. No token received.");
       }

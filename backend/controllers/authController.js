@@ -1,6 +1,21 @@
+// controllers/authController.js
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+// Generate JWT including email, name, and isAdmin
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      userId: user._id,
+      email: user.email,
+      name: user.name,
+      isAdmin: user.isAdmin || false,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
 // Register a new user
 exports.register = async (req, res) => {
@@ -12,7 +27,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "User already exists." });
     }
 
-    // ✅ Auto-promote first user to admin
+    // First registered user is admin
     const userCount = await User.countDocuments();
     const isAdmin = userCount === 0;
 
@@ -28,17 +43,7 @@ exports.register = async (req, res) => {
 
     await newUser.save();
 
-    // ✅ Create JWT with isAdmin info
-    const token = jwt.sign(
-      {
-        userId: newUser._id,
-        email: newUser.email,
-        name: newUser.name,
-        isAdmin: newUser.isAdmin || false,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = generateToken(newUser);
 
     res.status(201).json({
       message: "User registered successfully!",
@@ -47,7 +52,7 @@ exports.register = async (req, res) => {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        isAdmin: newUser.isAdmin || false,
+        isAdmin: newUser.isAdmin,
       },
     });
   } catch (err) {
@@ -71,17 +76,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
-    // ✅ Create JWT with isAdmin info
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        email: user.email,
-        name: user.name,
-        isAdmin: user.isAdmin || false,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = generateToken(user);
 
     res.status(200).json({
       token,
@@ -89,7 +84,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        isAdmin: user.isAdmin || false,
+        isAdmin: user.isAdmin,
       },
     });
   } catch (err) {
@@ -101,7 +96,7 @@ exports.login = async (req, res) => {
 // Get logged-in user's info
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId; // Decoded from token in authMiddleware
     const user = await User.findById(userId).select("-password");
 
     if (!user) {

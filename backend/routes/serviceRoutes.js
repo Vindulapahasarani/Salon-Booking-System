@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const serviceController = require("../controllers/serviceController");
-const verifyToken = require("../middleware/authMiddleware");
+const verifyToken = require("../middleware/verifyToken");
 
 // Public routes
 router.get("/", serviceController.getServices); // List all services

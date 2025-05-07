@@ -12,6 +12,7 @@ const {
 } = require("../controllers/appointmentController");
 
 const verifyToken = require("../middleware/verifyToken");
+
 const verifyAdmin = require("../middleware/verifyAdmin");
 
 // @route   POST /api/appointments
