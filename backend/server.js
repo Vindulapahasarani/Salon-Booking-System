@@ -31,6 +31,8 @@ app.use("/api/appointments", appointmentRoutes);
 app.use('/api/test', testEmailRoute);
 app.use("/api/contact", contactRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', require('./routes/paymentRoutes'));
+
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

@@ -3,7 +3,7 @@ const Appointment = require("../models/Appointment");
 // Create a new appointment
 exports.createAppointment = async (req, res) => {
   try {
-    if (!req.user || !req.user.userId || !req.user.email) {
+    if (!req.user?.userId || !req.user?.email) {
       return res.status(401).json({ message: "Unauthorized: user info missing" });
     }
 
@@ -16,6 +16,11 @@ exports.createAppointment = async (req, res) => {
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
       return res.status(400).json({ message: "Invalid date format." });
+    }
+
+    const conflict = await Appointment.findOne({ serviceId, date: parsedDate, timeSlot });
+    if (conflict) {
+      return res.status(409).json({ message: "This time slot is already booked." });
     }
 
     const appointment = new Appointment({
@@ -37,10 +42,10 @@ exports.createAppointment = async (req, res) => {
   }
 };
 
-// Get all appointments for logged-in user
+// Get all appointments for the logged-in user
 exports.getMyAppointments = async (req, res) => {
   try {
-    if (!req.user || !req.user.userId) {
+    if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -52,7 +57,7 @@ exports.getMyAppointments = async (req, res) => {
   }
 };
 
-// Get all appointments (Admin only) or by date if query param exists
+// Admin: Get all appointments, optionally filter by date
 exports.getAllAppointments = async (req, res) => {
   try {
     const { date } = req.query;
@@ -61,7 +66,6 @@ exports.getAllAppointments = async (req, res) => {
     if (date) {
       const start = new Date(date);
       start.setHours(0, 0, 0, 0);
-
       const end = new Date(date);
       end.setHours(23, 59, 59, 999);
       query.date = { $gte: start, $lte: end };
@@ -77,7 +81,7 @@ exports.getAllAppointments = async (req, res) => {
       userName: appt.userId?.name || "Unknown",
       userEmail: appt.userId?.email || appt.userEmail || "Unknown",
       serviceName: appt.serviceName || appt.serviceId?.name || "N/A",
-      date: appt.date,
+      date: appt.date.toISOString().split("T")[0],
       timeSlot: appt.timeSlot,
       price: appt.price,
       status: appt.status,
@@ -90,7 +94,7 @@ exports.getAllAppointments = async (req, res) => {
   }
 };
 
-// Get appointments by email
+// Get appointments by user email
 exports.getAppointmentsByEmail = async (req, res) => {
   const { email } = req.params;
   try {
@@ -102,19 +106,28 @@ exports.getAppointmentsByEmail = async (req, res) => {
   }
 };
 
-// Update (reschedule) appointment
+// Update/reschedule appointment
 exports.updateAppointment = async (req, res) => {
-  const appointmentId = req.params.id;
+  const { id: appointmentId } = req.params;
   try {
+    if (!appointmentId) {
+      return res.status(400).json({ message: "Appointment ID is required." });
+    }
+
+    const appt = await Appointment.findById(appointmentId);
+    if (!appt) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    if (req.user.userId !== appt.userId.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ message: "Forbidden: You cannot update this appointment." });
+    }
+
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
       req.body,
       { new: true }
     );
-
-    if (!updatedAppointment) {
-      return res.status(404).json({ message: "Appointment not found." });
-    }
 
     res.status(200).json({ message: "Appointment updated successfully!", appointment: updatedAppointment });
   } catch (err) {
@@ -123,10 +136,14 @@ exports.updateAppointment = async (req, res) => {
   }
 };
 
-// Approve an appointment (Admin only)
+// Admin: Approve an appointment
 exports.approveAppointment = async (req, res) => {
-  const appointmentId = req.params.id;
+  const { id: appointmentId } = req.params;
   try {
+    if (!appointmentId) {
+      return res.status(400).json({ message: "Appointment ID is required." });
+    }
+
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
       { status: "approved" },
@@ -144,16 +161,42 @@ exports.approveAppointment = async (req, res) => {
   }
 };
 
-// Delete an appointment
+// Delete an appointment (User or Admin)
 exports.deleteAppointment = async (req, res) => {
-  const appointmentId = req.params.id;
+  const { id: appointmentId } = req.params;
   try {
-    const deletedAppointment = await Appointment.findByIdAndDelete(appointmentId);
+    if (!appointmentId) {
+      return res.status(400).json({ message: "Appointment ID is required." });
+    }
 
-    if (!deletedAppointment) {
+    const appt = await Appointment.findById(appointmentId);
+    if (!appt) {
       return res.status(404).json({ message: "Appointment not found." });
     }
 
+    // Check if user is authorized
+    const isOwner = req.user.userId === appt.userId.toString();
+    const isAdmin = req.user.isAdmin;
+
+    // Enforce 24-hour cancellation rule for regular users
+    const now = new Date();
+    const appointmentDateTime = new Date(appt.date);
+    const [hours, minutes] = appt.timeSlot.split(":").map(Number);
+    appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+    const hoursDiff = (appointmentDateTime - now) / (1000 * 60 * 60);
+
+    if (!isAdmin && isOwner && hoursDiff < 24) {
+      return res.status(403).json({
+        message: "You can only cancel appointments at least 24 hours in advance.",
+      });
+    }
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: "Forbidden: You cannot delete this appointment." });
+    }
+
+    await appt.deleteOne();
     res.status(200).json({ message: "Appointment deleted successfully!" });
   } catch (err) {
     console.error("❌ deleteAppointment error:", err.stack);

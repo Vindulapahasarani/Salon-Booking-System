@@ -1,14 +1,20 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import axios from "@/utils/axios";
-import { format } from "date-fns";
-import toast from "react-hot-toast";
+import { useState, useEffect } from 'react';
+import axios from '@/utils/axios';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+
+interface Appointment {
+  _id: string;
+  date: string;
+  timeSlot: string;
+}
 
 interface RescheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  appointment: any; // Replace 'any' with your Appointment type if available
+  appointment: Appointment;
   fetchAppointments: () => void;
 }
 
@@ -18,34 +24,45 @@ export default function RescheduleModal({
   appointment,
   fetchAppointments,
 }: RescheduleModalProps) {
-  const [newDate, setNewDate] = useState("");
-  const [newTime, setNewTime] = useState("");
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  if (!isOpen || !appointment) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setNewDate('');
+      setNewTime('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  // Safety check - don't render if no appointment or ID
+  if (!isOpen || !appointment || !appointment._id) return null;
 
   const handleReschedule = async () => {
+    setError('');
     if (!newDate || !newTime) {
-      setError("Please select a new date and time.");
+      setError('Please select a new date and time.');
       return;
     }
 
     try {
       setLoading(true);
-      const payload = {
-        date: newDate,
-        time: newTime,
-      };
+      console.log(`Rescheduling appointment ${appointment._id} to ${newDate} at ${newTime}`);
 
-      await axios.put(`/appointments/${appointment._id}`, payload);
+      // Send only date and timeSlot as expected by backend schema
+      await axios.put(`/appointments/${appointment._id}`, {
+        date: newDate,       // e.g. "2025-05-08"
+        timeSlot: newTime,   // e.g. "10:30"
+      });
 
-      toast.success("Appointment rescheduled successfully!"); // ✅ Correct place for toast
-      fetchAppointments(); // Refetch updated appointments
-      onClose(); // Close the modal
+      toast.success('Appointment rescheduled!');
+      await fetchAppointments();
+      onClose();
     } catch (err: any) {
-      console.error("Reschedule Error:", err);
-      setError(err?.response?.data?.message || "Failed to reschedule appointment");
+      console.error('Reschedule Error:', err);
+      setError(err?.response?.data?.message || 'Failed to reschedule appointment.');
     } finally {
       setLoading(false);
     }
@@ -56,11 +73,13 @@ export default function RescheduleModal({
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4 text-center">Reschedule Appointment</h2>
 
-        <div className="mb-4">
-          <p className="text-gray-600 text-sm mb-1">Current Date & Time:</p>
-          <p className="text-gray-800 font-semibold">
-            {format(new Date(appointment.date), "PPP")} at {appointment.time}
+        <div className="mb-4 text-sm text-gray-700">
+          <p className="mb-1">Current:</p>
+          <p className="font-semibold">
+            {format(new Date(appointment.date), 'PPP')} at {appointment.timeSlot}
           </p>
+          {/* Display appointment ID for debugging */}
+          <p className="text-xs text-gray-500 mt-1">Appointment ID: {appointment._id}</p>
         </div>
 
         <div className="space-y-4">
@@ -70,7 +89,8 @@ export default function RescheduleModal({
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 block w-full border rounded-md px-3 py-2"
+              disabled={loading}
             />
           </div>
 
@@ -80,16 +100,17 @@ export default function RescheduleModal({
               type="time"
               value={newTime}
               onChange={(e) => setNewTime(e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 block w-full border rounded-md px-3 py-2"
+              disabled={loading}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex justify-end gap-2 mt-4">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400 text-gray-800"
+              className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800"
               disabled={loading}
             >
               Cancel
@@ -99,7 +120,7 @@ export default function RescheduleModal({
               className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white"
               disabled={loading}
             >
-              {loading ? "Rescheduling..." : "Confirm"}
+              {loading ? 'Rescheduling...' : 'Confirm'}
             </button>
           </div>
         </div>

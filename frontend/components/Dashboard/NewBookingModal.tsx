@@ -17,44 +17,56 @@ interface NewBookingModalProps {
   fetchAppointments: () => void;
 }
 
-export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: NewBookingModalProps) {
+export default function NewBookingModal({
+  isOpen,
+  onClose,
+  fetchAppointments,
+}: NewBookingModalProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchServices();
+      resetForm();
+    }
+  }, [isOpen]);
+
+  const resetForm = () => {
+    setSelectedService('');
+    setDate('');
+    setTime('');
+  };
 
   const fetchServices = async () => {
     try {
       const res = await axios.get('/services');
       setServices(res.data);
     } catch (err) {
-      console.error('Failed to fetch services', err);
+      console.error('Fetch services error:', err);
       toast.error('Failed to load services.');
     }
   };
 
-  useEffect(() => {
-    if (isOpen) fetchServices();
-  }, [isOpen]);
-
   const handleBooking = async () => {
-    const selectedServiceObj = services.find((s) => s._id === selectedService);
+    const service = services.find((s) => s._id === selectedService);
 
-    if (!selectedServiceObj || !date || !time) {
+    if (!service || !date || !time) {
       toast.error('Please fill in all fields.');
       return;
     }
 
-    // Combine date and time into ISO string
-    const isoDateTime = new Date(`${date}T${time}`);
-
     try {
+      setLoading(true);
       await axios.post('/appointments', {
-        serviceId: selectedServiceObj._id,
-        serviceName: selectedServiceObj.name,
-        date: isoDateTime.toISOString(),   // 👉 required for backend `date`
-        timeSlot: time,                    // 👉 saved separately
-        price: selectedServiceObj.price,
+        serviceId: service._id,
+        serviceName: service.name,
+        date, // send as plain YYYY-MM-DD
+        timeSlot: time, // send as plain HH:mm
+        price: service.price,
       });
 
       toast.success('Appointment booked!');
@@ -63,6 +75,8 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
     } catch (err: any) {
       console.error('Booking error:', err);
       toast.error(err?.response?.data?.message || 'Failed to book appointment.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,10 +85,10 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
       <Dialog as="div" className="relative z-50" onClose={onClose}>
         <Transition.Child
           as={Fragment}
-          enter="ease-out duration-300"
+          enter="ease-out duration-200"
           enterFrom="opacity-0"
           enterTo="opacity-100"
-          leave="ease-in duration-200"
+          leave="ease-in duration-150"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
@@ -85,64 +99,71 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
           <div className="flex min-h-full items-center justify-center p-4">
             <Transition.Child
               as={Fragment}
-              enter="ease-out duration-300"
+              enter="ease-out duration-200"
               enterFrom="opacity-0 scale-95"
               enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
+              leave="ease-in duration-150"
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
                 <Dialog.Title className="text-lg font-bold mb-4">Book New Appointment</Dialog.Title>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
-                  <select
-                    value={selectedService}
-                    onChange={(e) => setSelectedService(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Select a service</option>
-                    {services.map((service) => (
-                      <option key={service._id} value={service._id}>
-                        {service.name} – ${service.price}
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Service</label>
+                    <select
+                      value={selectedService}
+                      onChange={(e) => setSelectedService(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2"
+                      disabled={loading}
+                    >
+                      <option value="">Select a service</option>
+                      {services.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.name} – ${s.price}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Date</label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Time</label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2"
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 mt-6">
                   <button
                     onClick={onClose}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    disabled={loading}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleBooking}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    disabled={loading}
                   >
-                    Book
+                    {loading ? 'Booking...' : 'Book'}
                   </button>
                 </div>
               </Dialog.Panel>

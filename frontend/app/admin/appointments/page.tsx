@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import axios from '@/utils/axios';
 import { format } from 'date-fns';
-import { useAuth } from '@/context/AuthContext'; // ✅ corrected path
+import { useAuth } from '@/context/AuthContext'; 
 import { useRouter } from 'next/navigation';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Appointment {
   _id: string;
@@ -26,6 +27,7 @@ interface User {
 export default function AdminAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { user, loading } = useAuth() as {
     user: User | null;
@@ -33,6 +35,19 @@ export default function AdminAppointmentsPage() {
   };
 
   const router = useRouter();
+
+  const fetchAllAppointments = async () => {
+    try {
+      setLoadingAppointments(true);
+      const res = await axios.get('/appointments/all');
+      setAppointments(res.data);
+    } catch (err) {
+      console.error('Failed to fetch appointments:', err);
+      toast.error('Failed to load appointments');
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
 
   useEffect(() => {
     if (loading) return; // wait until auth finishes loading
@@ -42,29 +57,52 @@ export default function AdminAppointmentsPage() {
       return;
     }
 
-    const fetchAllAppointments = async () => {
-      try {
-        setLoadingAppointments(true);
-        const res = await axios.get('/appointments/all');
-        setAppointments(res.data);
-      } catch (err) {
-        console.error('Failed to fetch appointments:', err);
-      } finally {
-        setLoadingAppointments(false);
-      }
-    };
-
     fetchAllAppointments();
   }, [user, loading, router]);
 
   const updateStatus = async (id: string, status: 'approved' | 'canceled') => {
+    // Validate ID
+    if (!id) {
+      toast.error('Invalid appointment ID');
+      return;
+    }
+
     try {
+      setProcessingId(id);
       await axios.put(`/appointments/${id}`, { status });
       setAppointments((prev) =>
         prev.map((appt) => (appt._id === id ? { ...appt, status } : appt))
       );
+      toast.success(`Appointment ${status} successfully`);
     } catch (err) {
       console.error('Failed to update appointment:', err);
+      toast.error('Failed to update appointment status');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    // Validate ID
+    if (!id) {
+      toast.error('Invalid appointment ID');
+      return;
+    }
+
+    const confirm = window.confirm("Are you sure you want to delete this appointment?");
+    if (!confirm) return;
+    
+    try {
+      setProcessingId(id);
+      await axios.delete(`/appointments/${id}`);
+      toast.success('Appointment deleted successfully');
+      // Remove from list
+      setAppointments(prev => prev.filter(appt => appt._id !== id));
+    } catch (err) {
+      console.error('Failed to delete appointment:', err);
+      toast.error('Failed to delete appointment');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -74,6 +112,7 @@ export default function AdminAppointmentsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <Toaster position="top-center" />
       <h1 className="text-3xl font-bold mb-4">All Appointments</h1>
 
       {loadingAppointments ? (
@@ -109,14 +148,23 @@ export default function AdminAppointmentsPage() {
                     <button
                       onClick={() => updateStatus(appt._id, 'approved')}
                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                      disabled={processingId === appt._id || appt.status === 'approved'}
                     >
-                      Approve
+                      {processingId === appt._id ? 'Processing...' : 'Approve'}
                     </button>
                     <button
                       onClick={() => updateStatus(appt._id, 'canceled')}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                      disabled={processingId === appt._id || appt.status === 'canceled'}
                     >
-                      Cancel
+                      {processingId === appt._id ? 'Processing...' : 'Cancel'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(appt._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                      disabled={processingId === appt._id}
+                    >
+                      {processingId === appt._id ? 'Processing...' : 'Delete'}
                     </button>
                   </td>
                 </tr>
