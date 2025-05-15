@@ -28,7 +28,7 @@ const appointmentSchema = new mongoose.Schema(
       type: Date,
       required: true,
       validate: {
-        validator: function(value) {
+        validator: function (value) {
           return value > new Date();
         },
         message: "Appointment date must be in the future"
@@ -53,13 +53,23 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: [500, "Notes cannot exceed 500 characters"]
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid"],
+      default: "unpaid"
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["card", "cash"],
+      default: "card"
     }
   },
   {
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function(doc, ret) {
+      transform: function (doc, ret) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
@@ -69,7 +79,7 @@ const appointmentSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
+// Indexes for performance
 appointmentSchema.index({ userId: 1 });
 appointmentSchema.index({ serviceId: 1 });
 appointmentSchema.index({ date: 1, timeSlot: 1 });

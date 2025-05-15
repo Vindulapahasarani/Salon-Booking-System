@@ -7,7 +7,8 @@ const verifyToken = require("../middleware/verifyToken"); // Import the middlewa
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 
-// Protected route - must have token
+// Protected routes
 router.get("/me", verifyToken, authController.getMe);
+router.put("/update-profile", verifyToken, authController.updateProfile); // ✅ New route for updating profile
 
 module.exports = router;

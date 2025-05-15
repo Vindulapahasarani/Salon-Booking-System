@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { createCheckoutSession } = require('../controllers/paymentController');
-const verifyToken = require('../middleware/verifyToken');
+const paymentController = require('../controllers/paymentController');
 
-router.post('/create-checkout-session', verifyToken, createCheckoutSession);
+// @route   POST /api/payments/create-checkout-session
+// @desc    Create Stripe Checkout session
+// @access  Public (or use auth middleware if needed)
+router.post('/create-checkout-session', paymentController.createCheckoutSession);
 
 module.exports = router;

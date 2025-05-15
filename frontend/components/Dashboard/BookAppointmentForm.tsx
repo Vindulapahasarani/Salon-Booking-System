@@ -29,14 +29,12 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate inputs
     if (!date || !time) {
       toast.error('Please select both date and time!');
       setIsSubmitting(false);
       return;
     }
 
-    // Check if date is in the future
     const selectedDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -54,19 +52,18 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
     }
 
     try {
+      const payload = {
+        serviceId: service._id,
+        date, // formatted as 'YYYY-MM-DD' from input
+        timeSlot: time, // e.g., '14:30'
+      };
+
       const response = await fetch('/api/appointments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          serviceId: service._id,
-          serviceName: service.name,
-          price: service.price,
-          date: selectedDate.toISOString(),
-          timeSlot: time,
-          userEmail: session.user.email
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -76,8 +73,8 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
       }
 
       toast.success('Appointment booked successfully!');
-      router.refresh(); // Refresh to show new appointment
-      onClose?.(); // Close modal if provided
+      router.refresh();
+      onClose?.();
     } catch (error: any) {
       console.error('Booking error:', error);
       toast.error(error.message || 'Failed to book appointment. Please try again.');
@@ -87,7 +84,10 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-auto">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-auto"
+    >
       <h2 className="text-xl font-bold mb-4">Book New Appointment</h2>
 
       <div className="space-y-4">

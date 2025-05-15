@@ -1,15 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const cors = require("cors"); // ✅ Import cors
-
+const cors = require("cors");
 
 const authRoutes = require("./routes/authRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
-const testEmailRoute = require('./routes/testEmail');
+const testEmailRoute = require("./routes/testEmail");
 const contactRoutes = require("./routes/contactRoutes");
-const adminRoutes = require('./routes/adminRoutes');
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 dotenv.config();
 
@@ -28,11 +29,11 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
-app.use('/api/test', testEmailRoute);
+app.use("/api/test", testEmailRoute);
 app.use("/api/contact", contactRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/payments', require('./routes/paymentRoutes'));
-
+app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/payments", paymentRoutes);  // ✅ Moved to separate variable for clarity
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

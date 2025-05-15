@@ -1,9 +1,9 @@
 // controllers/authController.js
-const User = require("../models/User");
+const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Generate JWT including email, name, and isAdmin
+// Generate JWT including essential info
 const generateToken = (user) => {
   return jwt.sign(
     {
@@ -19,7 +19,7 @@ const generateToken = (user) => {
 
 // Register a new user
 exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, mobile, city, profilePicture, preferredStylists } = req.body;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "User already exists." });
     }
 
-    // First registered user is admin
+    // First registered user becomes admin
     const userCount = await User.countDocuments();
     const isAdmin = userCount === 0;
 
@@ -39,6 +39,10 @@ exports.register = async (req, res) => {
       email,
       password: hashedPassword,
       isAdmin,
+      mobile,
+      city,
+      profilePicture,
+      preferredStylists,
     });
 
     await newUser.save();
@@ -53,6 +57,10 @@ exports.register = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         isAdmin: newUser.isAdmin,
+        mobile: newUser.mobile,
+        city: newUser.city,
+        profilePicture: newUser.profilePicture,
+        preferredStylists: newUser.preferredStylists,
       },
     });
   } catch (err) {
@@ -85,6 +93,10 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        mobile: user.mobile,
+        city: user.city,
+        profilePicture: user.profilePicture,
+        preferredStylists: user.preferredStylists,
       },
     });
   } catch (err) {
@@ -96,7 +108,7 @@ exports.login = async (req, res) => {
 // Get logged-in user's info
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.userId; // Decoded from token in authMiddleware
+    const userId = req.user.userId;
     const user = await User.findById(userId).select("-password");
 
     if (!user) {
@@ -106,6 +118,46 @@ exports.getMe = async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     console.error("❌ GetMe error:", err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Update user profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const { name, mobile, city, profilePicture, preferredStylists } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Update fields if provided
+    if (name) user.name = name;
+    if (mobile) user.mobile = mobile;
+    if (city) user.city = city;
+    if (profilePicture) user.profilePicture = profilePicture;
+    if (preferredStylists) user.preferredStylists = preferredStylists;
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        mobile: user.mobile,
+        city: user.city,
+        profilePicture: user.profilePicture,
+        preferredStylists: user.preferredStylists,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Update Profile error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
