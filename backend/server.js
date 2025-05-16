@@ -11,6 +11,7 @@ const contactRoutes = require("./routes/contactRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const employeeRoutes = require('./routes/employeeRoutes');
 
 dotenv.config();
 
@@ -39,6 +40,10 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/payments", paymentRoutes);
+<<<<<<< HEAD
+=======
+app.use('/api/employees', employeeRoutes);
+>>>>>>> a310d24 (Your commit message here)
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
