@@ -22,8 +22,13 @@ app.use(cors({
   credentials: true,
 }));
 
-// ✅ Middleware to parse JSON requests
+// ✅ Special handling for Stripe webhook route
+// This must be before the express.json() middleware
+app.use('/api/webhook', express.raw({ type: 'application/json' }));
+
+// ✅ Middleware to parse JSON requests for all other routes
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ✅ API Routes
 app.use("/api/auth", authRoutes);
@@ -33,12 +38,19 @@ app.use("/api/test", testEmailRoute);
 app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/payments", paymentRoutes);  // ✅ Moved to separate variable for clarity
+app.use("/api/payments", paymentRoutes);
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
+
+// Create a route for testing Stripe config
+app.get('/api/config/stripe', (req, res) => {
+  res.send({
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
+});
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
