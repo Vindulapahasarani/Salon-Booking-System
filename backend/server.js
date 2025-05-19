@@ -38,12 +38,9 @@ app.use("/api/test", testEmailRoute);
 app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
-<<<<<<< HEAD
 app.use("/api/payments", paymentRoutes);
-=======
-app.use("/api", paymentRoutes); // Mount payment routes directly under /api
->>>>>>> 4ee9b53 (Your commit message)
 app.use('/api/employees', employeeRoutes);
+
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
