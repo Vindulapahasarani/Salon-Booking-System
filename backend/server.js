@@ -40,10 +40,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/payments", paymentRoutes);
-<<<<<<< HEAD
-=======
 app.use('/api/employees', employeeRoutes);
->>>>>>> a310d24 (Your commit message here)
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
