@@ -24,13 +24,12 @@ exports.getUnpaidAppointments = async (req, res) => {
 exports.processCashPayment = async (req, res) => {
   try {
     const { appointmentIds } = req.body;
-    const userId = req.user.id; // Assuming you have user authentication middleware
+    const userId = req.user.id;
 
     if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
       return res.status(400).json({ message: 'No appointments selected' });
     }
 
-    // Update appointments to mark them as paid
     const result = await Appointment.updateMany(
       {
         _id: { $in: appointmentIds },
@@ -64,13 +63,12 @@ exports.processCashPayment = async (req, res) => {
 exports.createCheckoutSession = async (req, res) => {
   try {
     const { appointmentIds } = req.body;
-    const userId = req.user.id; // Assuming you have user authentication middleware
+    const userId = req.user.id;
 
     if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
       return res.status(400).json({ message: 'No appointments selected' });
     }
 
-    // Fetch the appointments to be paid
     const appointments = await Appointment.find({
       _id: { $in: appointmentIds },
       userId: userId,
@@ -81,7 +79,6 @@ exports.createCheckoutSession = async (req, res) => {
       return res.status(404).json({ message: 'No valid unpaid appointments found' });
     }
 
-    // Create line items for Stripe checkout
     const lineItems = appointments.map(appointment => ({
       price_data: {
         currency: 'usd',
@@ -94,7 +91,6 @@ exports.createCheckoutSession = async (req, res) => {
       quantity: 1,
     }));
 
-    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -133,15 +129,12 @@ exports.handleStripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle the checkout.session.completed event
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     
-    // Extract appointment IDs from metadata
     const appointmentIds = session.metadata.appointmentIds.split(',');
     
     try {
-      // Update appointments to mark them as paid
       await Appointment.updateMany(
         {
           _id: { $in: appointmentIds }

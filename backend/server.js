@@ -11,7 +11,7 @@ const contactRoutes = require("./routes/contactRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-const employeeRoutes = require('./routes/employeeRoutes');
+const employeeRoutes = require("./routes/employeeRoutes");
 
 dotenv.config();
 
@@ -24,7 +24,6 @@ app.use(cors({
 }));
 
 // ✅ Special handling for Stripe webhook route
-// This must be before the express.json() middleware
 app.use('/api/webhook', express.raw({ type: 'application/json' }));
 
 // ✅ Middleware to parse JSON requests for all other routes
@@ -39,7 +38,11 @@ app.use("/api/test", testEmailRoute);
 app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
+<<<<<<< HEAD
 app.use("/api/payments", paymentRoutes);
+=======
+app.use("/api", paymentRoutes); // Mount payment routes directly under /api
+>>>>>>> 4ee9b53 (Your commit message)
 app.use('/api/employees', employeeRoutes);
 
 // ✅ Connect to MongoDB
@@ -47,11 +50,17 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// Create a route for testing Stripe config
+// ✅ Create a route for testing Stripe config
 app.get('/api/config/stripe', (req, res) => {
   res.send({
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
   });
+});
+
+// ✅ Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("❌ Server error:", err.stack);
+  res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 // ✅ Start server

@@ -60,9 +60,7 @@ export default function EmployeesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated
     if (!user) {
-      // Wait a bit to see if user data is being loaded
       const timer = setTimeout(() => {
         if (!user) {
           toast.error('Please sign in to access this page');
@@ -72,7 +70,6 @@ export default function EmployeesPage() {
       return () => clearTimeout(timer);
     }
 
-    // Check if user is admin
     if (user && !user.isAdmin) {
       toast.error('You do not have permission to access this page');
       router.replace('/dashboard');
@@ -91,12 +88,10 @@ export default function EmployeesPage() {
       if (res.data && Array.isArray(res.data)) {
         setEmployees(res.data);
       } else {
-        console.error('Invalid response format:', res.data);
         setError('Received invalid data format from server');
         toast.error('Error loading employees data');
       }
     } catch (error: any) {
-      console.error('Failed to fetch employees:', error);
       setError(error.response?.data?.message || 'Failed to load employees');
       toast.error('Failed to load employees');
     } finally {
@@ -110,11 +105,8 @@ export default function EmployeesPage() {
       const res = await axios.get('/services');
       if (res.data && Array.isArray(res.data)) {
         setServices(res.data);
-      } else {
-        console.error('Invalid services data format:', res.data);
       }
     } catch (error: any) {
-      console.error('Failed to fetch services:', error);
       toast.error('Failed to load services');
     }
   };
@@ -133,31 +125,22 @@ export default function EmployeesPage() {
     if (!formData.name.trim()) return 'Name is required';
     if (!formData.position.trim()) return 'Position is required';
     if (!formData.email.trim()) return 'Email is required';
-    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) return 'Please enter a valid email address';
-    
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const validationError = validateForm();
     if (validationError) {
       toast.error(validationError);
       return;
     }
-    
     setSubmitting(true);
     setError(null);
-    
     try {
-      const dataToSubmit = {
-        ...formData,
-        joinDate: formData.joinDate || new Date().toISOString(),
-      };
-      
+      const dataToSubmit = { ...formData, joinDate: formData.joinDate || new Date().toISOString() };
       if (editingId) {
         await axios.put(`/employees/${editingId}`, dataToSubmit);
         toast.success('Employee updated successfully');
@@ -165,20 +148,14 @@ export default function EmployeesPage() {
         await axios.post('/employees', dataToSubmit);
         toast.success('Employee added successfully');
       }
-      
       resetForm();
       fetchEmployees();
     } catch (error: any) {
-      console.error('Error saving employee:', error);
-      
       const errorMessage = error.response?.data?.message || 'Failed to save employee';
       setError(errorMessage);
-      toast.error(errorMessage);
-      
-      if (error.response?.data?.error?.includes('duplicate key') || 
-          error.response?.data?.error?.includes('email already in use')) {
-        toast.error('Email address is already in use');
-      }
+      toast.error(errorMessage.includes('duplicate key') || errorMessage.includes('email already in use') 
+        ? 'Email address is already in use' 
+        : errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -207,12 +184,10 @@ export default function EmployeesPage() {
         setError(null);
         await axios.delete(`/employees/${id}`);
         toast.success('Employee deleted successfully');
-        fetchEmployees();
+        setEmployees(employees.filter(emp => emp._id !== id));
       } catch (error: any) {
-        console.error('Error deleting employee:', error);
-        const errorMessage = error.response?.data?.message || 'Failed to delete employee';
-        setError(errorMessage);
-        toast.error(errorMessage);
+        setError(error.response?.data?.message || 'Failed to delete employee');
+        toast.error('Failed to delete employee');
       }
     }
   };
@@ -224,7 +199,6 @@ export default function EmployeesPage() {
     setError(null);
   };
 
-  // If still loading and no data yet received
   if (loading && !employees.length) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[300px]">
@@ -264,7 +238,6 @@ export default function EmployeesPage() {
           <h2 className="text-lg font-semibold mb-4">
             {editingId ? 'Edit Employee' : 'Add New Employee'}
           </h2>
-          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -278,7 +251,6 @@ export default function EmployeesPage() {
                   required
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Position*</label>
                 <input
@@ -290,7 +262,6 @@ export default function EmployeesPage() {
                   required
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email*</label>
                 <input
@@ -302,7 +273,6 @@ export default function EmployeesPage() {
                   required
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input
@@ -313,7 +283,6 @@ export default function EmployeesPage() {
                   className="w-full border rounded p-2"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                 <input
@@ -324,7 +293,6 @@ export default function EmployeesPage() {
                   className="w-full border rounded p-2"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
@@ -337,7 +305,6 @@ export default function EmployeesPage() {
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Join Date</label>
                 <input
@@ -348,7 +315,6 @@ export default function EmployeesPage() {
                   className="w-full border rounded p-2"
                 />
               </div>
-              
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
                 <select
@@ -366,7 +332,6 @@ export default function EmployeesPage() {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple services</p>
               </div>
-              
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
                 <textarea
@@ -377,14 +342,11 @@ export default function EmployeesPage() {
                 />
               </div>
             </div>
-            
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={submitting}
-                className={`${
-                  submitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-                } text-white px-4 py-2 rounded flex items-center`}
+                className={`${submitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded flex items-center`}
               >
                 {submitting && (
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -394,7 +356,6 @@ export default function EmployeesPage() {
                 )}
                 {submitting ? 'Saving...' : editingId ? 'Update Employee' : 'Add Employee'}
               </button>
-              
               <button
                 type="button"
                 onClick={resetForm}

@@ -1,30 +1,19 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
+  const token = req.header('Authorization')?.replace('Bearer ', '') || req.body.token;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Access denied. No token provided." });
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided.' });
   }
-
-  const token = authHeader.split(" ")[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach decoded user info (e.g. id, email, isAdmin) to request
-    req.user = decoded;
-
+    req.user = decoded; // Attach decoded user info to request
     next();
   } catch (err) {
-    console.error("❌ Invalid Token:", err.message);
-
-    const errorMsg =
-      err.name === "TokenExpiredError"
-        ? "Session expired. Please log in again."
-        : "Invalid token.";
-
-    return res.status(403).json({ message: `Forbidden: ${errorMsg}` });
+    console.error('Token verification error:', err.message);
+    res.status(401).json({ message: 'Invalid token.' });
   }
 };
 

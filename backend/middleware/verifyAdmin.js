@@ -1,14 +1,18 @@
-const User = require("../models/User");
+const User = require("../models/user");
 
 const verifyAdmin = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: 'User information missing from token.' });
+    }
+
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (user.role !== "admin") {
+    if (!user.isAdmin) {
       return res.status(403).json({ message: "Access denied. Admins only." });
     }
 

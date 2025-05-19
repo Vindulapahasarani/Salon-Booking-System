@@ -16,8 +16,8 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-   const parsedDate = new Date(date);
-parsedDate.setHours(0, 0, 0, 0); // ✅ Normalize to start of day
+    const parsedDate = new Date(date);
+    parsedDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
     if (isNaN(parsedDate)) {
       return res.status(400).json({ message: "Invalid date format." });
@@ -124,6 +124,7 @@ exports.updateAppointment = async (req, res) => {
   try {
     const { id: appointmentId } = req.params;
     const { userId, isAdmin } = req.user;
+    const { date, timeSlot } = req.body;
 
     const appt = await Appointment.findById(appointmentId);
     if (!appt) return res.status(404).json({ message: "Appointment not found." });
@@ -132,8 +133,36 @@ exports.updateAppointment = async (req, res) => {
       return res.status(403).json({ message: "Forbidden: Cannot update this appointment." });
     }
 
-    const updated = await Appointment.findByIdAndUpdate(appointmentId, req.body, { new: true });
-    res.status(200).json({ message: "Appointment updated successfully!", appointment: updated });
+    if (appt.status === 'cancelled') {
+      return res.status(400).json({ message: "Cannot reschedule a cancelled appointment." });
+    }
+
+    const parsedDate = new Date(date);
+    parsedDate.setHours(0, 0, 0, 0);
+    if (isNaN(parsedDate)) {
+      return res.status(400).json({ message: "Invalid date format." });
+    }
+
+    // Check if the new date is in the past
+    if (parsedDate < new Date().setHours(0, 0, 0, 0)) {
+      return res.status(400).json({ message: "Cannot reschedule to a past date." });
+    }
+
+    const conflict = await Appointment.findOne({
+      _id: { $ne: appointmentId },
+      serviceId: appt.serviceId,
+      date: parsedDate,
+      timeSlot,
+    });
+    if (conflict) {
+      return res.status(409).json({ message: "This time slot is already booked." });
+    }
+
+    appt.date = parsedDate;
+    appt.timeSlot = timeSlot;
+    const updated = await appt.save();
+
+    res.status(200).json({ message: "Appointment rescheduled successfully!", appointment: updated });
   } catch (err) {
     console.error("❌ updateAppointment error:", err.stack);
     res.status(500).json({ message: "Failed to update appointment." });
@@ -206,6 +235,10 @@ exports.cancelAppointment = async (req, res) => {
 
     const appt = await Appointment.findById(appointmentId);
     if (!appt) return res.status(404).json({ message: "Appointment not found." });
+
+    if (appt.status === 'cancelled') {
+      return res.status(400).json({ message: "Appointment is already cancelled." });
+    }
 
     const isOwner = userId === appt.userId.toString();
 
@@ -289,5 +322,35 @@ exports.getAppointmentsByMonth = async (req, res) => {
   } catch (err) {
     console.error("❌ getAppointmentsByMonth error:", err.stack);
     res.status(500).json({ message: "Failed to fetch appointments by month." });
+  }
+};
+
+// @desc    Pay with cash
+// @route   PUT /api/appointments/:id/pay-with-cash
+// @access  Private
+exports.payWithCash = async (req, res) => {
+  try {
+    const { id: appointmentId } = req.params;
+    const { userId } = req.user;
+
+    const appt = await Appointment.findById(appointmentId);
+    if (!appt) return res.status(404).json({ message: "Appointment not found." });
+
+    if (userId !== appt.userId.toString()) {
+      return res.status(403).json({ message: "Forbidden: Cannot pay for this appointment." });
+    }
+
+    if (appt.paymentStatus === 'paid') {
+      return res.status(400).json({ message: "Appointment already paid." });
+    }
+
+    appt.paymentStatus = 'paid';
+    appt.paymentMethod = 'cash';
+    await appt.save();
+
+    res.status(200).json({ message: "Payment confirmed with cash!", appointment: appt });
+  } catch (err) {
+    console.error("❌ payWithCash error:", err.stack);
+    res.status(500).json({ message: "Failed to process cash payment." });
   }
 };

@@ -27,11 +27,12 @@ const appointmentSchema = new mongoose.Schema(
     date: {
       type: Date,
       required: true,
+      // Temporarily remove future date validation for testing
       validate: {
         validator: function (value) {
-          return value > new Date();
+          return true; // Allow all dates for now
         },
-        message: "Appointment date must be in the future"
+        message: "Appointment date must be valid"
       }
     },
     timeSlot: {

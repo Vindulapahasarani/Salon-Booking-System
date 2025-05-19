@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
+// Import controllers and middleware
 const {
   createAppointment,
   getMyAppointments,
@@ -9,13 +10,17 @@ const {
   updateAppointment,
   approveAppointment,
   deleteAppointment,
-  getAppointmentsByDate,     // ✅ new route for calendar view
-  getAppointmentsByMonth,    // ✅ new route for visual indicators
-  cancelAppointment,         // ✅ optional separate cancel handler (w/ 24hr check)
+  getAppointmentsByDate,
+  getAppointmentsByMonth,
+  cancelAppointment,
+  payWithCash,
 } = require("../controllers/appointmentController");
 
 const verifyToken = require("../middleware/verifyToken");
 const verifyAdmin = require("../middleware/verifyAdmin");
+
+// Debug log to verify imports
+console.log("Imported createAppointment:", typeof createAppointment);
 
 // @route   POST /api/appointments
 // @desc    Create a new appointment
@@ -66,5 +71,10 @@ router.get("/month/:month", verifyToken, verifyAdmin, getAppointmentsByMonth);
 // @desc    Cancel appointment with 24hr rule (optional alternative to DELETE)
 // @access  Private
 router.put("/:id/cancel", verifyToken, cancelAppointment);
+
+// @route   PUT /api/appointments/:id/pay-with-cash
+// @desc    Pay appointment with cash
+// @access  Private
+router.put("/:id/pay-with-cash", verifyToken, payWithCash);
 
 module.exports = router;

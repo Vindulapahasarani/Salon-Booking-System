@@ -15,13 +15,15 @@ interface Appointment {
   date: string;
   timeSlot: string;
   price: number;
-  status: 'pending' | 'approved' | 'canceled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
 }
 
 export default function AdminCalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [appointmentCounts, setAppointmentCounts] = useState<Record<number, number>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const handleDateChange: CalendarProps['onChange'] = (value) => {
     const date = Array.isArray(value) ? value[0] : value;
@@ -31,29 +33,56 @@ export default function AdminCalendarPage() {
   const fetchAppointmentsByDate = async (date: Date) => {
     try {
       setLoading(true);
+      setError(null);
       const formattedDate = format(date, 'yyyy-MM-dd');
-      const res = await axios.get(`/appointments?date=${formattedDate}`);
+      console.log('Fetching appointments for date:', formattedDate);
+      const res = await axios.get(`/appointments/date/${formattedDate}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      console.log('Appointments response:', res.data);
       setAppointments(res.data);
-    } catch (error) {
-      console.error('Failed to fetch appointments:', error);
+    } catch (error: any) {
+      console.error('Fetch appointments error:', error.response?.data || error.message);
+      setError(`Failed to fetch appointments: ${error.response?.status || 'Unknown'} - ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (id: string, status: 'approved' | 'canceled') => {
+  const fetchAppointmentsByMonth = async (date: Date) => {
     try {
-      await axios.put(`/appointments/${id}`, { status });
+      setError(null);
+      const formattedMonth = format(date, 'yyyy-MM');
+      console.log('Fetching appointment counts for month:', formattedMonth);
+      const res = await axios.get(`/appointments/month/${formattedMonth}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      console.log('Appointment counts response:', res.data);
+      setAppointmentCounts(res.data);
+    } catch (error: any) {
+      console.error('Fetch appointment counts error:', error.response?.data || error.message);
+      setError(`Failed to fetch appointment counts: ${error.response?.status || 'Unknown'} - ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  const updateStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+    try {
+      const endpoint = status === 'confirmed' ? `/appointments/${id}/approve` : `/appointments/${id}/cancel`;
+      await axios.put(endpoint, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      });
       setAppointments((prev) =>
         prev.map((a) => (a._id === id ? { ...a, status } : a))
       );
-    } catch (err) {
-      console.error('Failed to update appointment:', err);
+    } catch (err: any) {
+      console.error('Update appointment error:', err.response?.data || err.message);
+      setError(`Failed to update appointment: ${err.response?.status || 'Unknown'} - ${err.response?.data?.message || err.message}`);
     }
   };
 
   useEffect(() => {
     fetchAppointmentsByDate(selectedDate);
+    fetchAppointmentsByMonth(selectedDate);
   }, [selectedDate]);
 
   return (
@@ -67,7 +96,22 @@ export default function AdminCalendarPage() {
             onChange={handleDateChange}
             value={selectedDate}
             calendarType="gregory"
+            tileContent={({ date }) => {
+              const day = date.getDate();
+              const count = appointmentCounts[day] || 0;
+              return count > 0 ? <div className="dot" /> : null;
+            }}
           />
+          <style jsx>{`
+            .dot {
+              height: 8px;
+              width: 8px;
+              background-color: #4CAF50;
+              border-radius: 50%;
+              display: inline-block;
+              margin-top: 2px;
+            }
+          `}</style>
         </div>
 
         {/* Appointments Table */}
@@ -76,6 +120,7 @@ export default function AdminCalendarPage() {
             Appointments on {format(selectedDate, 'MMMM dd, yyyy')}
           </h2>
 
+          {error && <p className="text-red-500 mb-2">{error}</p>}
           {loading ? (
             <p>Loading...</p>
           ) : appointments.length === 0 ? (
@@ -101,14 +146,16 @@ export default function AdminCalendarPage() {
                       <td className="py-2 px-4 capitalize">{appt.status}</td>
                       <td className="py-2 px-4 flex gap-2 justify-center">
                         <button
-                          onClick={() => updateStatus(appt._id, 'approved')}
+                          onClick={() => updateStatus(appt._id, 'confirmed')}
                           className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                          disabled={appt.status === 'confirmed' || appt.status === 'cancelled' || appt.status === 'completed'}
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => updateStatus(appt._id, 'canceled')}
+                          onClick={() => updateStatus(appt._id, 'cancelled')}
                           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                          disabled={appt.status === 'cancelled' || appt.status === 'completed'}
                         >
                           Cancel
                         </button>
