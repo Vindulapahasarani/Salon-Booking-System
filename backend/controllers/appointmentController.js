@@ -133,19 +133,10 @@ exports.updateAppointment = async (req, res) => {
       return res.status(403).json({ message: "Forbidden: Cannot update this appointment." });
     }
 
-    if (appt.status === 'cancelled') {
-      return res.status(400).json({ message: "Cannot reschedule a cancelled appointment." });
-    }
-
     const parsedDate = new Date(date);
     parsedDate.setHours(0, 0, 0, 0);
     if (isNaN(parsedDate)) {
       return res.status(400).json({ message: "Invalid date format." });
-    }
-
-    // Check if the new date is in the past
-    if (parsedDate < new Date().setHours(0, 0, 0, 0)) {
-      return res.status(400).json({ message: "Cannot reschedule to a past date." });
     }
 
     const conflict = await Appointment.findOne({
@@ -235,10 +226,6 @@ exports.cancelAppointment = async (req, res) => {
 
     const appt = await Appointment.findById(appointmentId);
     if (!appt) return res.status(404).json({ message: "Appointment not found." });
-
-    if (appt.status === 'cancelled') {
-      return res.status(400).json({ message: "Appointment is already cancelled." });
-    }
 
     const isOwner = userId === appt.userId.toString();
 

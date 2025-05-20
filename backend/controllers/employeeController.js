@@ -1,4 +1,3 @@
-// controllers/employeeController.js
 const Employee = require('../models/Employee');
 
 // Get all employees
@@ -35,7 +34,6 @@ exports.getEmployeeById = async (req, res) => {
 // Create new employee
 exports.createEmployee = async (req, res) => {
   try {
-    // Basic validation
     const { name, position, email } = req.body;
     
     if (!name || !position || !email) {
@@ -45,7 +43,6 @@ exports.createEmployee = async (req, res) => {
       });
     }
     
-    // Check if email already exists
     const existingEmployee = await Employee.findOne({ email: email.toLowerCase() });
     if (existingEmployee) {
       return res.status(400).json({ 
@@ -57,7 +54,6 @@ exports.createEmployee = async (req, res) => {
     const newEmployee = new Employee(req.body);
     const savedEmployee = await newEmployee.save();
     
-    // Return the populated employee
     const populatedEmployee = await Employee.findById(savedEmployee._id).populate('services', 'name');
     
     res.status(201).json(populatedEmployee);
@@ -92,7 +88,6 @@ exports.updateEmployee = async (req, res) => {
       return res.status(400).json({ message: 'Invalid employee ID format' });
     }
     
-    // Check for email duplication only if email is being updated
     if (req.body.email) {
       const existingEmployee = await Employee.findOne({ 
         email: req.body.email.toLowerCase(),
@@ -155,7 +150,7 @@ exports.deleteEmployee = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' });
     }
     
-    res.status(200).json({ message: 'Employee deleted successfully' });
+    res.status(200).json({ message: 'Employee deleted successfully', deletedEmployee: employee });
   } catch (error) {
     console.error('Error deleting employee:', error);
     res.status(500).json({ message: 'Failed to delete employee', error: error.message });

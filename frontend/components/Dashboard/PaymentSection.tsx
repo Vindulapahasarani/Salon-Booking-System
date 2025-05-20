@@ -65,21 +65,20 @@ export default function PaymentSection() {
 
     try {
       if (paymentMethod === 'card') {
-        // Process card payment via Stripe
-        const response = await axios.post('/api/stripe/checkout', {
+        const response = await axios.post('/api/payments/stripe/checkout', {
           appointmentIds: selectedAppointments
         });
-        
-        // Redirect to Stripe checkout
-        window.location.href = response.data.url;
+        if (response.data.url) {
+          window.location.href = response.data.url;
+        } else {
+          throw new Error('No redirect URL received from Stripe');
+        }
       } else {
-        // Process cash payment
         await axios.post('/api/payments/cash', {
           appointmentIds: selectedAppointments
         });
-        
         alert('Cash payment confirmed! Your appointments have been marked as paid.');
-        fetchUnpaidAppointments(); // Refresh the list
+        fetchUnpaidAppointments();
         setSelectedAppointments([]);
       }
     } catch (error: any) {

@@ -5,10 +5,14 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from '@/utils/axios';
 import { format } from 'date-fns';
-import type { CalendarProps } from 'react-calendar';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
 
+// Define Appointment interface
 interface Appointment {
-  _id: string;
+  id: string; // Use id instead of _id due to toJSON transform in backend
+  userId: { name: string; email: string };
+  serviceId: { name: string; price: number };
   userEmail: string;
   userName?: string;
   serviceName: string;
@@ -24,10 +28,18 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(false);
   const [appointmentCounts, setAppointmentCounts] = useState<Record<number, number>>({});
   const [error, setError] = useState<string | null>(null);
+  const { user, loading: authLoading } = useAuth();
 
-  const handleDateChange: CalendarProps['onChange'] = (value) => {
-    const date = Array.isArray(value) ? value[0] : value;
-    if (date instanceof Date) setSelectedDate(date);
+  // Define handleDateChange to match the Value type from react-calendar
+  const handleDateChange = (
+    value: Date | null | [Date | null, Date | null],
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    if (value instanceof Date) {
+      setSelectedDate(value);
+    } else if (Array.isArray(value) && value[0] instanceof Date) {
+      setSelectedDate(value[0]);
+    }
   };
 
   const fetchAppointmentsByDate = async (date: Date) => {
@@ -36,14 +48,30 @@ export default function AdminCalendarPage() {
       setError(null);
       const formattedDate = format(date, 'yyyy-MM-dd');
       console.log('Fetching appointments for date:', formattedDate);
-      const res = await axios.get(`/appointments/date/${formattedDate}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      const res = await axios.get(`/admin/appointments/date/${formattedDate}`, {
+        headers: { Authorization: `Bearer ${user?.token || ''}` },
       });
-      console.log('Appointments response:', res.data);
-      setAppointments(res.data);
+      console.log('Raw Appointments response:', res.data);
+      if (!res.data || !Array.isArray(res.data)) {
+        throw new Error('Invalid response format: Expected an array of appointments');
+      }
+      // Map the response to ensure all required fields are present
+      const formattedAppointments = res.data.map((appt: any) => ({
+        id: appt.id || '', // Use id instead of _id
+        userId: appt.userId || { name: '', email: '' },
+        serviceId: appt.serviceId || { name: '', price: 0 },
+        userEmail: appt.userEmail || '',
+        userName: appt.userId?.name || '',
+        serviceName: appt.serviceId?.name || appt.serviceName || '',
+        date: appt.date || '',
+        timeSlot: appt.timeSlot || '',
+        price: appt.price || 0,
+        status: appt.status || 'pending',
+      })).filter((appt: Appointment) => appt.id); // Filter out invalid appointments
+      setAppointments(formattedAppointments);
     } catch (error: any) {
       console.error('Fetch appointments error:', error.response?.data || error.message);
-      setError(`Failed to fetch appointments: ${error.response?.status || 'Unknown'} - ${error.response?.data?.message || error.message}`);
+      setError(`Failed to fetch appointments: ${error.response?.status || 'Unknown'} - ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -54,47 +82,78 @@ export default function AdminCalendarPage() {
       setError(null);
       const formattedMonth = format(date, 'yyyy-MM');
       console.log('Fetching appointment counts for month:', formattedMonth);
-      const res = await axios.get(`/appointments/month/${formattedMonth}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      const res = await axios.get(`/admin/appointments/month/${formattedMonth}`, {
+        headers: { Authorization: `Bearer ${user?.token || ''}` },
       });
-      console.log('Appointment counts response:', res.data);
+      console.log('Raw Appointment counts response:', res.data);
+      if (!res.data || typeof res.data !== 'object') {
+        throw new Error('Invalid response format: Expected an object for appointment counts');
+      }
       setAppointmentCounts(res.data);
     } catch (error: any) {
       console.error('Fetch appointment counts error:', error.response?.data || error.message);
-      setError(`Failed to fetch appointment counts: ${error.response?.status || 'Unknown'} - ${error.response?.data?.message || error.message}`);
+      setError(`Failed to fetch appointment counts: ${error.response?.status || 'Unknown'} - ${error.message}`);
     }
   };
 
-  const updateStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+  const handleApprove = async (id: string) => {
+    if (!id) {
+      setError('Appointment ID is undefined');
+      return;
+    }
     try {
-      const endpoint = status === 'confirmed' ? `/appointments/${id}/approve` : `/appointments/${id}/cancel`;
-      await axios.put(endpoint, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      console.log('Approving appointment with ID:', id);
+      const res = await axios.patch(`/admin/appointments/${id}`, { status: 'confirmed' }, {
+        headers: { Authorization: `Bearer ${user?.token || ''}` },
       });
-      setAppointments((prev) =>
-        prev.map((a) => (a._id === id ? { ...a, status } : a))
-      );
+      console.log('Approve response:', res.data);
+      fetchAppointmentsByDate(selectedDate);
     } catch (err: any) {
-      console.error('Update appointment error:', err.response?.data || err.message);
-      setError(`Failed to update appointment: ${err.response?.status || 'Unknown'} - ${err.response?.data?.message || err.message}`);
+      console.error('Approve appointment error:', err.response?.data || err.message);
+      setError(`Failed to approve appointment: ${err.response?.status || 'Unknown'} - ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!id) {
+      setError('Appointment ID is undefined');
+      return;
+    }
+    if (confirm('Are you sure you want to delete this appointment?')) {
+      try {
+        console.log('Deleting appointment with ID:', id);
+        const res = await axios.delete(`/admin/appointments/${id}`, {
+          headers: { Authorization: `Bearer ${user?.token || ''}` },
+        });
+        console.log('Delete response:', res.data);
+        fetchAppointmentsByDate(selectedDate);
+      } catch (err: any) {
+        console.error('Delete appointment error:', err.response?.data || err.message);
+        setError(`Failed to delete appointment: ${err.response?.status || 'Unknown'} - ${err.response?.data?.message || err.message}`);
+      }
     }
   };
 
   useEffect(() => {
-    fetchAppointmentsByDate(selectedDate);
-    fetchAppointmentsByMonth(selectedDate);
-  }, [selectedDate]);
+    if (!authLoading && user?.isAdmin) {
+      fetchAppointmentsByDate(selectedDate);
+      fetchAppointmentsByMonth(selectedDate);
+    }
+  }, [selectedDate, user, authLoading]);
+
+  if (authLoading) return <p>Loading authentication...</p>;
+  if (!user?.isAdmin) return <p>Access denied. Admins only.</p>;
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-3xl font-bold mb-4">Admin Calendar View</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Calendar */}
         <div className="bg-white rounded-2xl shadow p-4">
           <Calendar
             onChange={handleDateChange}
             value={selectedDate}
+            selectRange={false}
             calendarType="gregory"
             tileContent={({ date }) => {
               const day = date.getDate();
@@ -114,7 +173,6 @@ export default function AdminCalendarPage() {
           `}</style>
         </div>
 
-        {/* Appointments Table */}
         <div>
           <h2 className="text-xl font-semibold mb-2">
             Appointments on {format(selectedDate, 'MMMM dd, yyyy')}
@@ -139,26 +197,28 @@ export default function AdminCalendarPage() {
                 </thead>
                 <tbody>
                   {appointments.map((appt) => (
-                    <tr key={appt._id} className="border-t">
+                    <tr key={appt.id} className="border-t">
                       <td className="py-2 px-4">{appt.serviceName}</td>
                       <td className="py-2 px-4">{appt.userName || appt.userEmail}</td>
                       <td className="py-2 px-4">{appt.timeSlot}</td>
                       <td className="py-2 px-4 capitalize">{appt.status}</td>
                       <td className="py-2 px-4 flex gap-2 justify-center">
-                        <button
-                          onClick={() => updateStatus(appt._id, 'confirmed')}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                        <Button
+                          onClick={() => handleApprove(appt.id)}
+                          variant="default"
+                          className="bg-green-500 hover:bg-green-600"
                           disabled={appt.status === 'confirmed' || appt.status === 'cancelled' || appt.status === 'completed'}
                         >
                           Approve
-                        </button>
-                        <button
-                          onClick={() => updateStatus(appt._id, 'cancelled')}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                        </Button>
+                        <Button
+                          onClick={() => handleDelete(appt.id)}
+                          variant="default"
+                          className="bg-red-500 hover:bg-red-600"
                           disabled={appt.status === 'cancelled' || appt.status === 'completed'}
                         >
-                          Cancel
-                        </button>
+                          Delete
+                        </Button>
                       </td>
                     </tr>
                   ))}

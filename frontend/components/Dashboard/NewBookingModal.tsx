@@ -34,12 +34,7 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchServices();
-      setDate(''); // Reset form when modal opens
-      setTime('');
-      setSelectedService('');
-    }
+    if (isOpen) fetchServices();
   }, [isOpen]);
 
   const handleBooking = async () => {
@@ -50,19 +45,15 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
       return;
     }
 
-    // Validate date is not in the past
-    const selectedDate = new Date(`${date}T${time}`);
-    if (selectedDate < new Date()) {
-      toast.error('Cannot book an appointment in the past.');
-      return;
-    }
+    // Combine date and time into ISO string
+    const isoDateTime = new Date(`${date}T${time}`);
 
     try {
       await axios.post('/appointments', {
         serviceId: selectedServiceObj._id,
         serviceName: selectedServiceObj.name,
-        date: selectedDate.toISOString(),
-        timeSlot: time,
+        date: isoDateTime.toISOString(),   // 👉 required for backend `date`
+        timeSlot: time,                    // 👉 saved separately
         price: selectedServiceObj.price,
       });
 
@@ -127,7 +118,6 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    min={new Date().toISOString().split('T')[0]} // Prevent past dates
                   />
                 </div>
 

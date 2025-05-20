@@ -10,7 +10,14 @@ router.get('/stats', verifyToken, verifyAdmin, adminController.getAdminStats);
 // Get all appointments
 router.get('/appointments', verifyToken, verifyAdmin, adminController.getAllAppointments);
 
-// Update appointment status
+// Get appointments by date
+router.get('/appointments/date/:date', verifyToken, verifyAdmin, adminController.getAppointmentsByDate);
+
+// Get appointment counts by month
+router.get('/appointments/month/:month', verifyToken, verifyAdmin, adminController.getAppointmentsByMonth);
+
+// Update or delete appointment status
 router.patch('/appointments/:id', verifyToken, verifyAdmin, adminController.updateAppointmentStatus);
+router.delete('/appointments/:id', verifyToken, verifyAdmin, adminController.updateAppointmentStatus);
 
 module.exports = router;

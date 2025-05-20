@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import axios from '@/utils/axios';
-import AppointmentCard from '@/components/Dashboard/AppointmentCard';
-import RescheduleModal from '@/components/Dashboard/RescheduleModal';
-import NewBookingModal from '@/components/Dashboard/NewBookingModal';
-import UserProfile from '@/components/Dashboard/UserProfile';
-import toast, { Toaster } from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import axios from "@/utils/axios";
+import AppointmentCard from "@/components/Dashboard/AppointmentCard";
+import RescheduleModal from "@/components/Dashboard/RescheduleModal";
+import NewBookingModal from "@/components/Dashboard/NewBookingModal";
+import UserProfile from "@/components/Dashboard/UserProfile";
+import toast, { Toaster } from "react-hot-toast";
 
 interface Appointment {
   _id: string;
@@ -21,7 +21,7 @@ interface Appointment {
 export default function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -30,11 +30,10 @@ export default function DashboardPage() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/appointments/my');
+      const res = await axios.get("/appointments/my");
       setAppointments(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to fetch appointments');
-      toast.error(err?.response?.data?.message || 'Failed to fetch appointments');
+      setError(err?.response?.data?.message || "Failed to fetch appointments");
     } finally {
       setLoading(false);
     }
@@ -55,14 +54,14 @@ export default function DashboardPage() {
   };
 
   const cancelAppointment = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this appointment?')) return;
+    if (!confirm("Are you sure you want to cancel this appointment?")) return;
     setCancelingId(id);
     try {
       await axios.put(`/appointments/${id}/cancel`);
-      toast.success('Appointment canceled!');
+      toast.success("Appointment canceled!");
       fetchAppointments();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to cancel appointment');
+      toast.error(err?.response?.data?.message || "Failed to cancel appointment");
     } finally {
       setCancelingId(null);
     }
@@ -70,28 +69,30 @@ export default function DashboardPage() {
 
   const rescheduleAppointment = async (id: string, newDate: string, newTime: string) => {
     try {
-      const isoDateTime = new Date(`${newDate}T${newTime}`).toISOString();
-      await axios.put(`/appointments/${id}`, { date: isoDateTime, timeSlot: newTime });
-      toast.success('Appointment rescheduled!');
+      await axios.put(`/appointments/${id}`, { date: newDate, timeSlot: newTime });
+      toast.success("Appointment rescheduled!");
       fetchAppointments();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to reschedule appointment');
-      throw err; // Let the modal handle the error display
+      toast.error(err?.response?.data?.message || "Failed to reschedule appointment");
     }
   };
 
   const payAppointment = async (id: string, paymentMethod: 'stripe' | 'cash') => {
     try {
       if (paymentMethod === 'stripe') {
-        const res = await axios.post('/payments/stripe/checkout', { appointmentIds: [id] });
-        window.location.href = res.data.url;
+        const res = await axios.post('/api/payments/stripe/checkout', { appointmentIds: [id] });
+        if (res.data.url) {
+          window.location.href = res.data.url;
+        } else {
+          throw new Error('No redirect URL received from Stripe');
+        }
       } else {
         await axios.put(`/appointments/${id}/pay-with-cash`);
-        toast.success('Cash payment confirmed!');
+        toast.success("Cash payment confirmed!");
         fetchAppointments();
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Payment failed');
+      toast.error(err?.response?.data?.message || "Payment failed");
     }
   };
 
@@ -132,7 +133,7 @@ export default function DashboardPage() {
                     key={appointment._id}
                     appointment={appointment}
                     onCancel={cancelAppointment}
-                    onReschedule={() => openRescheduleModal(appointment)}
+                    onReschedule={rescheduleAppointment}
                     onPay={payAppointment}
                   />
                 ))}
@@ -148,7 +149,6 @@ export default function DashboardPage() {
           onClose={closeRescheduleModal}
           appointment={selectedAppointment}
           fetchAppointments={fetchAppointments}
-          onReschedule={rescheduleAppointment}
         />
       )}
 

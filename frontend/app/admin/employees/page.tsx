@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface Employee {
   _id: string;
@@ -149,7 +150,7 @@ export default function EmployeesPage() {
         toast.success('Employee added successfully');
       }
       resetForm();
-      fetchEmployees();
+      fetchEmployees(); // Refresh list after successful operation
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to save employee';
       setError(errorMessage);
@@ -184,7 +185,7 @@ export default function EmployeesPage() {
         setError(null);
         await axios.delete(`/employees/${id}`);
         toast.success('Employee deleted successfully');
-        setEmployees(employees.filter(emp => emp._id !== id));
+        fetchEmployees(); // Refresh list after deletion
       } catch (error: any) {
         setError(error.response?.data?.message || 'Failed to delete employee');
         toast.error('Failed to delete employee');
@@ -218,12 +219,12 @@ export default function EmployeesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Employees</h1>
         {!showForm && (
-          <button 
+          <Button
+            variant="default"
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Add New Employee
-          </button>
+          </Button>
         )}
       </div>
 
@@ -343,27 +344,21 @@ export default function EmployeesPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="submit"
                 disabled={submitting}
-                className={`${submitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded flex items-center`}
+                variant="default"
               >
-                {submitting && (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
                 {submitting ? 'Saving...' : editingId ? 'Update Employee' : 'Add Employee'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={resetForm}
                 disabled={submitting}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                variant="outline"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -411,18 +406,20 @@ export default function EmployeesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
+                      <Button
                         onClick={() => handleEdit(employee)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        variant="ghost"
+                        className="mr-2"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleDelete(employee._id)}
+                        variant="ghost"
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))

@@ -5,7 +5,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 // Get all unpaid appointments for the logged-in user
 exports.getUnpaidAppointments = async (req, res) => {
   try {
-    const userId = req.user.id; // Assuming you have user authentication middleware
+    const userId = req.user.id;
 
     const unpaidAppointments = await Appointment.find({
       userId: userId,
@@ -62,6 +62,7 @@ exports.processCashPayment = async (req, res) => {
 // Create Stripe checkout session
 exports.createCheckoutSession = async (req, res) => {
   try {
+    console.log('Received request to /api/payments/stripe/checkout');
     const { appointmentIds } = req.body;
     const userId = req.user.id;
 
@@ -86,7 +87,7 @@ exports.createCheckoutSession = async (req, res) => {
           name: appointment.serviceName,
           description: `Appointment on ${new Date(appointment.date).toLocaleDateString()} at ${appointment.timeSlot}`,
         },
-        unit_amount: Math.round(appointment.price * 100), // Stripe uses cents
+        unit_amount: Math.round(appointment.price * 100),
       },
       quantity: 1,
     }));
@@ -103,6 +104,7 @@ exports.createCheckoutSession = async (req, res) => {
       },
     });
 
+    console.log('Stripe session created:', session.url);
     res.status(200).json({ 
       id: session.id,
       url: session.url 
