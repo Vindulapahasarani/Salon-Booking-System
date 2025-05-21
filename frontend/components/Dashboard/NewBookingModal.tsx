@@ -45,16 +45,22 @@ export default function NewBookingModal({ isOpen, onClose, fetchAppointments }: 
       return;
     }
 
-    // Combine date and time into ISO string
-    const isoDateTime = new Date(`${date}T${time}`);
+    // Validate and format date
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      toast.error('Invalid date format.');
+      return;
+    }
+    const formattedDate = parsedDate.toISOString().split('T')[0]; // Ensures "YYYY-MM-DD"
 
     try {
       await axios.post('/appointments', {
         serviceId: selectedServiceObj._id,
         serviceName: selectedServiceObj.name,
-        date: isoDateTime.toISOString(),   // 👉 required for backend `date`
-        timeSlot: time,                    // 👉 saved separately
+        date: formattedDate, // Send as string "YYYY-MM-DD"
+        timeSlot: time, // Send time as HH:MM
         price: selectedServiceObj.price,
+        paymentMethod: 'card', // Default payment method
       });
 
       toast.success('Appointment booked!');

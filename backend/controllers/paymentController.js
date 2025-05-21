@@ -158,3 +158,39 @@ exports.handleStripeWebhook = async (req, res) => {
 
   res.status(200).json({ received: true });
 };
+
+// Verify Stripe payment session
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ message: 'Session ID is required' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ message: 'Payment not completed' });
+    }
+
+    const appointmentIds = session.metadata.appointmentIds.split(',');
+    const appointments = await Appointment.find({
+      _id: { $in: appointmentIds },
+      paymentStatus: 'paid',
+      paymentMethod: 'card',
+    }).select('serviceName price date timeSlot');
+
+    res.status(200).json({
+      success: true,
+      appointments: appointments.map((appt) => ({
+        id: appt._id,
+        serviceName: appt.serviceName,
+        price: appt.price,
+        date: appt.date,
+        timeSlot: appt.timeSlot,
+      })),
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ message: 'Error verifying payment', error: error.message });
+  }
+};

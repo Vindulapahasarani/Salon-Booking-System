@@ -30,28 +30,27 @@ export default function PaymentSection() {
       setError(null);
       const response = await axios.get('/api/appointments/unpaid');
       setUnpaidAppointments(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching unpaid appointments:', error);
-      setError('Failed to load unpaid appointments. Please try again.');
+      setError(error.response?.data?.message || 'Failed to load unpaid appointments. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAppointmentSelect = (appointmentId: string) => {
-    setSelectedAppointments(prev => {
-      if (prev.includes(appointmentId)) {
-        return prev.filter(id => id !== appointmentId);
-      } else {
-        return [...prev, appointmentId];
-      }
-    });
+    setSelectedAppointments((prev) =>
+      prev.includes(appointmentId)
+        ? prev.filter((id) => id !== appointmentId)
+        : [...prev, appointmentId]
+    );
   };
 
   const calculateTotal = () => {
     return unpaidAppointments
-      .filter(appointment => selectedAppointments.includes(appointment.id))
-      .reduce((total, appointment) => total + appointment.price, 0);
+      .filter((appointment) => selectedAppointments.includes(appointment.id))
+      .reduce((total, appointment) => total + appointment.price, 0)
+      .toFixed(2);
   };
 
   const handlePayment = async () => {
@@ -66,20 +65,23 @@ export default function PaymentSection() {
     try {
       if (paymentMethod === 'card') {
         const response = await axios.post('/api/payments/stripe/checkout', {
-          appointmentIds: selectedAppointments
+          appointmentIds: selectedAppointments,
         });
         if (response.data.url) {
-          window.location.href = response.data.url;
+          window.location.href = response.data.url; // Redirect to Stripe checkout
         } else {
           throw new Error('No redirect URL received from Stripe');
         }
       } else {
-        await axios.post('/api/payments/cash', {
-          appointmentIds: selectedAppointments
+        const response = await axios.post('/api/payments/cash', {
+          appointmentIds: selectedAppointments,
         });
-        alert('Cash payment confirmed! Your appointments have been marked as paid.');
-        fetchUnpaidAppointments();
+        setUnpaidAppointments((prev) =>
+          prev.filter((appt) => !selectedAppointments.includes(appt.id))
+        );
         setSelectedAppointments([]);
+        alert(`Cash payment confirmed for ${response.data.updatedCount} appointment(s)!`);
+        await fetchUnpaidAppointments(); // Refresh unpaid appointments
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -106,7 +108,7 @@ export default function PaymentSection() {
         <h2 className="text-xl font-bold mb-4">Payment Information</h2>
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
           {error}
-          <Button 
+          <Button
             onClick={fetchUnpaidAppointments}
             className="mt-2 bg-red-600 hover:bg-red-700 text-white text-sm"
             size="sm"
@@ -130,23 +132,22 @@ export default function PaymentSection() {
   return (
     <Card className="p-6 mt-4">
       <h2 className="text-xl font-bold mb-4">Payment Information</h2>
-      
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4">
           {error}
         </div>
       )}
-      
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Unpaid Appointments</h3>
-        
         <div className="space-y-3">
-          {unpaidAppointments.map(appointment => (
-            <div 
-              key={appointment.id} 
+          {unpaidAppointments.map((appointment) => (
+            <div
+              key={appointment.id}
               className={`p-4 border rounded-md cursor-pointer flex items-center ${
-                selectedAppointments.includes(appointment.id) 
-                  ? 'border-blue-500 bg-blue-50' 
+                selectedAppointments.includes(appointment.id)
+                  ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200'
               }`}
               onClick={() => handleAppointmentSelect(appointment.id)}
@@ -154,7 +155,7 @@ export default function PaymentSection() {
               <input
                 type="checkbox"
                 checked={selectedAppointments.includes(appointment.id)}
-                onChange={() => {}}
+                onChange={() => handleAppointmentSelect(appointment.id)}
                 className="mr-3 h-5 w-5"
               />
               <div className="flex-1">
@@ -199,15 +200,17 @@ export default function PaymentSection() {
 
           <div className="flex items-center justify-between mb-4 pt-4 border-t">
             <p className="font-semibold">Total Amount:</p>
-            <p className="text-xl font-bold">${calculateTotal().toFixed(2)}</p>
+            <p className="text-xl font-bold">${calculateTotal()}</p>
           </div>
 
-          <Button 
-            onClick={handlePayment} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+          <Button
+            onClick={handlePayment}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading}
           >
-            {loading ? 'Processing...' : `Pay ${paymentMethod === 'card' ? 'with Card' : 'with Cash'}`}
+            {loading
+              ? 'Processing...'
+              : `Pay ${paymentMethod === 'card' ? 'with Card' : 'with Cash'}`}
           </Button>
         </>
       )}

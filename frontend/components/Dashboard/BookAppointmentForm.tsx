@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import axios from '@/utils/axios';
 
 interface Service {
   _id: string;
@@ -23,6 +24,7 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
   const router = useRouter();
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,8 +56,11 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
     try {
       const payload = {
         serviceId: service._id,
+        serviceName: service.name,
         date, // formatted as 'YYYY-MM-DD' from input
         timeSlot: time, // e.g., '14:30'
+        price: service.price,
+        paymentMethod,
       };
 
       const response = await fetch('/api/appointments', {
@@ -72,9 +77,24 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
         throw new Error(data.message || 'Booking failed');
       }
 
-      toast.success('Appointment booked successfully!');
-      router.refresh();
-      onClose?.();
+      // Handle payment after booking
+      if (paymentMethod === 'card') {
+        const stripeResponse = await axios.post('/api/payments/stripe/checkout', {
+          appointmentIds: [data.id],
+        });
+        if (stripeResponse.data.url) {
+          window.location.href = stripeResponse.data.url;
+        } else {
+          throw new Error('No redirect URL received from Stripe');
+        }
+      } else {
+        await axios.post('/api/payments/cash', {
+          appointmentIds: [data.id],
+        });
+        toast.success('Appointment booked and cash payment confirmed!');
+        router.refresh();
+        onClose?.();
+      }
     } catch (error: any) {
       console.error('Booking error:', error);
       toast.error(error.message || 'Failed to book appointment. Please try again.');
@@ -131,6 +151,31 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
           />
         </div>
 
+        {/* Payment Method */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+          <div className="flex space-x-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={paymentMethod === 'card'}
+                onChange={() => setPaymentMethod('card')}
+                className="h-5 w-5"
+              />
+              <span>💳 Card</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={paymentMethod === 'cash'}
+                onChange={() => setPaymentMethod('cash')}
+                className="h-5 w-5"
+              />
+              <span>💵 Cash</span>
+            </label>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-2">
           <button
@@ -146,7 +191,11 @@ export default function BookAppointmentForm({ service, onClose }: BookAppointmen
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Booking...' : 'Book Now'}
+            {isSubmitting
+              ? paymentMethod === 'card'
+                ? 'Processing Payment...'
+                : 'Booking...'
+              : 'Book and Pay'}
           </button>
         </div>
       </div>

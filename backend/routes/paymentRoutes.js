@@ -12,6 +12,9 @@ router.post('/payments/cash', verifyToken, paymentController.processCashPayment)
 // Create Stripe checkout session
 router.post('/payments/stripe/checkout', verifyToken, paymentController.createCheckoutSession);
 
+// Verify Stripe payment session
+router.post('/payments/verify', verifyToken, paymentController.verifyPayment);
+
 // Handle Stripe webhook
 router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleStripeWebhook);
 
