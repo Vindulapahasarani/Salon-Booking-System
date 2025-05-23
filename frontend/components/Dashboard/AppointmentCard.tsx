@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 interface AppointmentCardProps {
   appointment: {
+    id?:string;
     _id: string;
     serviceName: string;
     date: string;
@@ -26,7 +27,7 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule, onPay }: Appoint
 
   const handleRescheduleSubmit = () => {
     if (newDate && newTime) {
-      onReschedule(appointment._id, newDate, newTime);
+      onReschedule(appointment.id, newDate, newTime);
       setShowModal(false);
     }
   };
