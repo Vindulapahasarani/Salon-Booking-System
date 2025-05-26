@@ -1,4 +1,3 @@
-// controllers/authController.js
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -158,6 +157,18 @@ exports.updateProfile = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Update Profile error:", err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Logout user
+exports.logout = async (req, res) => {
+  try {
+    // Since JWT is stateless, no server-side session to clear
+    // Simply return success response to confirm logout
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (err) {
+    console.error("❌ Logout error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };

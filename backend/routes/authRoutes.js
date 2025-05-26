@@ -6,6 +6,7 @@ const verifyToken = require("../middleware/verifyToken"); // Import the middlewa
 // Public routes
 router.post("/register", authController.register);
 router.post("/login", authController.login);
+router.post("/logout", authController.logout); // New logout route
 
 // Protected routes
 router.get("/me", verifyToken, authController.getMe);
